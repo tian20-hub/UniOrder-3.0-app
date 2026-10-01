@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Badge, Button, Icon, PageIntro, StatCard } from './Shared'
+import { formatPhp } from '../utils/currency'
 
 function paymentTone(status) {
   if (status === 'Completed') return 'green'
@@ -42,7 +43,7 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
       <div className="stats-grid">
         <StatCard
           label="Collected this term"
-          value={`${revenue.toLocaleString()} ETB`}
+          value={formatPhp(revenue)}
           change="Across confirmed orders"
           icon="chart"
           tone="green"
@@ -135,7 +136,7 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
                     </div>
                   </td>
                   <td>
-                    <strong>{order.total.toLocaleString()} ETB</strong>
+                    <strong>{formatPhp(order.total)}</strong>
                   </td>
                   <td>
                     <Badge tone={paymentTone(order.status)}>
@@ -186,4 +187,3 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
     </div>
   )
 }
-

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Badge, Icon, PageIntro, StatCard } from './Shared'
+import { formatEtbAsPhp, formatPhp } from '../utils/currency'
 
 const monthly = [
   { label: 'May', orders: 42, revenue: 28 },
@@ -11,10 +12,10 @@ const monthly = [
 ]
 
 const topProducts = [
-  { name: 'Classic polo shirt', category: 'Tops · Sky blue', sold: 248, revenue: '104,160 ETB', percent: 92 },
-  { name: 'Everyday uniform trousers', category: 'Bottoms · Deep navy', sold: 186, revenue: '126,480 ETB', percent: 75 },
-  { name: 'Long sleeve oxford', category: 'Tops · Cloud white', sold: 142, revenue: '73,840 ETB', percent: 58 },
-  { name: 'Campus cardigan', category: 'Layers · Academy navy', sold: 96, revenue: '91,200 ETB', percent: 42 },
+  { name: 'Classic School Polo Shirt', category: 'Tops · Sky blue', sold: 248, revenue: 104160, percent: 92 },
+  { name: 'Everyday uniform trousers', category: 'Bottoms · Deep navy', sold: 186, revenue: 126480, percent: 75 },
+  { name: 'Long-Sleeve Oxford Shirt', category: 'Tops · Cloud white', sold: 142, revenue: 73840, percent: 58 },
+  { name: 'Academy Cardigan', category: 'Layers · Academy navy', sold: 96, revenue: 91200, percent: 42 },
 ]
 
 export default function Reports({ orders }) {
@@ -50,7 +51,7 @@ export default function Reports({ orders }) {
       <div className="stats-grid">
         <StatCard
           label="Total revenue"
-          value="482,650 ETB"
+          value={formatEtbAsPhp(482650)}
           change="+12.8% from last term"
           icon="chart"
           tone="green"
@@ -64,7 +65,7 @@ export default function Reports({ orders }) {
         />
         <StatCard
           label="Average order"
-          value={`${average.toLocaleString()} ETB`}
+          value={formatPhp(average)}
           change="Based on current orders"
           icon="receipt"
           tone="purple"
@@ -206,7 +207,7 @@ export default function Reports({ orders }) {
               <span className="top-product__bar">
                 <i style={{ width: `${product.percent}%` }} />
               </span>
-              <span className="top-product__revenue">{product.revenue}</span>
+              <span className="top-product__revenue">{formatEtbAsPhp(product.revenue)}</span>
             </div>
           ))}
         </div>
@@ -214,4 +215,3 @@ export default function Reports({ orders }) {
     </div>
   )
 }
-

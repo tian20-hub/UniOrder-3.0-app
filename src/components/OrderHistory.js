@@ -1,5 +1,6 @@
 import React from 'react'
 import { Badge, Icon, PageIntro, StatCard } from './Shared'
+import { formatPhp } from '../utils/currency'
 
 function statusTone(status) {
   if (status === 'Completed' || status === 'Ready for pickup') return 'green'
@@ -64,7 +65,7 @@ export default function OrderHistory({ orders }) {
                   <td>{order.date}</td>
                   <td>{order.items}</td>
                   <td>
-                    <strong>{order.total.toLocaleString()} ETB</strong>
+                    <strong>{formatPhp(order.total)}</strong>
                   </td>
                   <td>
                     <Badge tone={statusTone(order.status)}>
@@ -107,4 +108,3 @@ export default function OrderHistory({ orders }) {
     </div>
   )
 }
-

@@ -8,14 +8,46 @@ import FinancePayments from './components/FinancePayments'
 import MotherAdmin from './components/MotherAdmin'
 import Reports from './components/Reports'
 import { AppLayout } from './components/Shared'
+import { convertEtbToPhp } from './utils/currency'
 
 const pageDetails = {
-  '/catalog': { title: 'Program catalog', subtitle: 'Explore available degree programs.' },
+  '/catalog': { title: 'Student Uniform Catalog', subtitle: 'Search by course and order available uniforms.' },
   '/orders': { title: 'Order history', subtitle: 'Track your uniform orders from request to pickup.' },
   '/inventory': { title: 'Inventory', subtitle: 'Keep stock accurate and ready for the next order.' },
   '/finance': { title: 'Payments', subtitle: 'Review payments and release completed orders.' },
   '/admin': { title: 'System control', subtitle: 'Manage access and keep your campus running smoothly.' },
   '/reports': { title: 'Reports', subtitle: 'A clear view of orders, inventory, and revenue.' },
+}
+
+const defaultProfile = {
+  name: 'Amina Mekonnen',
+  email: 'amina@bluenile.edu',
+  grade: 'Grade 11',
+  campus: 'Blue Nile Academy',
+  orderUpdates: true,
+  promotions: false,
+}
+
+function readProfile() {
+  try {
+    const saved = window.localStorage.getItem('uniorder-profile')
+    if (!saved) return defaultProfile
+
+    const profile = JSON.parse(saved)
+    if (!profile || typeof profile !== 'object' || Array.isArray(profile)) return defaultProfile
+
+    return {
+      name: typeof profile.name === 'string' ? profile.name : defaultProfile.name,
+      email: typeof profile.email === 'string' ? profile.email : defaultProfile.email,
+      grade: typeof profile.grade === 'string' ? profile.grade : defaultProfile.grade,
+      campus: typeof profile.campus === 'string' ? profile.campus : defaultProfile.campus,
+      orderUpdates: typeof profile.orderUpdates === 'boolean' ? profile.orderUpdates : defaultProfile.orderUpdates,
+      promotions: typeof profile.promotions === 'boolean' ? profile.promotions : defaultProfile.promotions,
+    }
+  } catch (error) {
+    console.error('Unable to load saved profile settings.', error)
+    return defaultProfile
+  }
 }
 
 function roleHome(role) {
@@ -31,10 +63,11 @@ export default function App() {
   ))
   const [role, setRole] = useState('Student')
   const [signedIn, setSignedIn] = useState(false)
+  const [profile, setProfile] = useState(readProfile)
   const [orders, setOrders] = useState([
-    { id: 'ORD-24018', items: '2 items', date: 'Oct 01, 2026', total: 1250, status: 'Ready for pickup' },
-    { id: 'ORD-23972', items: '1 item', date: 'Sep 24, 2026', total: 680, status: 'Processing' },
-    { id: 'ORD-23891', items: '3 items', date: 'Sep 18, 2026', total: 1740, status: 'Completed' },
+    { id: 'ORD-24018', items: '2 items', date: 'Oct 01, 2026', total: convertEtbToPhp(1250), status: 'Ready for pickup' },
+    { id: 'ORD-23972', items: '1 item', date: 'Sep 24, 2026', total: convertEtbToPhp(680), status: 'Processing' },
+    { id: 'ORD-23891', items: '3 items', date: 'Sep 18, 2026', total: convertEtbToPhp(1740), status: 'Completed' },
   ])
   const [toast, setToast] = useState('')
 
@@ -66,6 +99,19 @@ export default function App() {
     setRole(selectedRole)
     setSignedIn(true)
     navigate(selectedRole === 'Student' ? '/catalog' : roleHome(selectedRole))
+  }
+
+  const saveProfile = (nextProfile, successMessage = 'Profile settings saved.') => {
+    try {
+      window.localStorage.setItem('uniorder-profile', JSON.stringify(nextProfile))
+      setProfile(nextProfile)
+      setToast(successMessage)
+      return true
+    } catch (error) {
+      console.error('Unable to save profile settings.', error)
+      setToast('Could not save profile settings. Please try again.')
+      return false
+    }
   }
 
   const createOrder = (itemNames, total) => {
@@ -125,6 +171,8 @@ export default function App() {
       title={detail.title}
       subtitle={detail.subtitle}
       role={role}
+      profile={profile}
+      onSaveProfile={saveProfile}
       onRoleChange={(nextRole) => {
         setRole(nextRole)
         navigate(roleHome(nextRole))

@@ -1,13 +1,14 @@
 import React, { useMemo, useState } from 'react'
 import { Badge, Button, Icon, PageIntro, StatCard } from './Shared'
+import { formatEtbAsPhp } from '../utils/currency'
 
 const initialItems = [
-  { id: 'UNI-001', name: 'Classic polo shirt', category: 'Tops', color: 'Sky blue', stock: 24, minimum: 12, price: 420 },
+  { id: 'UNI-001', name: 'Classic School Polo Shirt', category: 'Tops', color: 'Sky blue', stock: 24, minimum: 12, price: 420 },
   { id: 'UNI-002', name: 'Everyday uniform trousers', category: 'Bottoms', color: 'Deep navy', stock: 8, minimum: 10, price: 680 },
-  { id: 'UNI-003', name: 'Campus cardigan', category: 'Layers', color: 'Academy navy', stock: 12, minimum: 8, price: 950 },
+  { id: 'UNI-003', name: 'Academy Cardigan', category: 'Layers', color: 'Academy navy', stock: 12, minimum: 8, price: 950 },
   { id: 'UNI-004', name: 'Pleated uniform skirt', category: 'Bottoms', color: 'Slate', stock: 5, minimum: 8, price: 610 },
-  { id: 'UNI-005', name: 'Long sleeve oxford', category: 'Tops', color: 'Cloud white', stock: 31, minimum: 12, price: 520 },
-  { id: 'UNI-006', name: 'House sports tee', category: 'Sportswear', color: 'Forest green', stock: 16, minimum: 8, price: 360 },
+  { id: 'UNI-005', name: 'Long-Sleeve Oxford Shirt', category: 'Tops', color: 'Cloud white', stock: 31, minimum: 12, price: 520 },
+  { id: 'UNI-006', name: 'House Sports T-Shirt', category: 'Sportswear', color: 'Forest green', stock: 16, minimum: 8, price: 360 },
 ]
 
 export default function Inventory({ onNotify }) {
@@ -58,7 +59,7 @@ export default function Inventory({ onNotify }) {
         />
         <StatCard
           label="Inventory value"
-          value={`${items.reduce((sum, item) => sum + item.stock * item.price, 0).toLocaleString()} ETB`}
+          value={formatEtbAsPhp(items.reduce((sum, item) => sum + item.stock * item.price, 0))}
           change="At listed price"
           icon="chart"
           tone="purple"
@@ -134,7 +135,7 @@ export default function Inventory({ onNotify }) {
                     <td>{item.category}</td>
                     <td>{item.color}</td>
                     <td>
-                      <strong>{item.price.toLocaleString()} ETB</strong>
+                      <strong>{formatEtbAsPhp(item.price)}</strong>
                     </td>
                     <td>
                       <div className="stock-cell">
@@ -193,4 +194,3 @@ export default function Inventory({ onNotify }) {
     </div>
   )
 }
-

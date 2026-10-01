@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import ProfileSettings from './ProfileSettings'
 
 const iconPaths = {
   grid: (
@@ -7,6 +8,18 @@ const iconPaths = {
       <rect x="14" y="3" width="7" height="7" rx="1.5" />
       <rect x="3" y="14" width="7" height="7" rx="1.5" />
       <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </>
+  ),
+  user: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M5 21v-2a7 7 0 0 1 14 0v2" />
+    </>
+  ),
+  settings: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.6a8 8 0 0 1-1.5.9l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.5-.9l-1.7.6-1.4-2.4 1.4-1.1a7 7 0 0 1 0-1.8l-1.4-1.1 1.4-2.4 1.7.6a8 8 0 0 1 1.5-.9l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.5.9l1.7-.6 1.4 2.4-1.4 1.1a7 7 0 0 1-.1 1.7Z" />
     </>
   ),
   bag: (
@@ -150,6 +163,8 @@ export function AppLayout({
   title,
   subtitle,
   role,
+  profile,
+  onSaveProfile,
   onRoleChange,
   onNavigate,
   onSignOut,
@@ -157,9 +172,17 @@ export function AppLayout({
   children,
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const closeSettings = () => setSettingsOpen(false)
+  const profileInitials = profile.name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('')
   const groups = {
     Student: [
-      { path: '/catalog', label: 'Program catalog', icon: 'grid' },
+      { path: '/catalog', label: 'Uniform catalog', icon: 'bag' },
       { path: '/orders', label: 'My orders', icon: 'receipt' },
     ],
     Staff: [
@@ -226,10 +249,10 @@ export function AppLayout({
             <Icon name="chevron" size={15} />
           </label>
           <div className="sidebar__profile">
-            <div className="avatar">{role === 'Student' ? 'AM' : role.slice(0, 2).toUpperCase()}</div>
+            <div className="avatar">{role === 'Student' ? profileInitials : role.slice(0, 2).toUpperCase()}</div>
             <div className="sidebar__profile-text">
-              <strong>{role === 'Student' ? 'Amina Mekonnen' : `${role} account`}</strong>
-              <span>{role === 'Student' ? 'Grade 11 · Blue Nile' : 'Demo workspace'}</span>
+              <strong>{role === 'Student' ? profile.name : `${role} account`}</strong>
+              <span>{role === 'Student' ? `${profile.grade} · ${profile.campus}` : 'Demo workspace'}</span>
             </div>
             <button
               type="button"
@@ -258,11 +281,21 @@ export function AppLayout({
           </div>
           <div className="topbar__actions">
             <span className="campus-label">
-              <span className="campus-label__dot" /> Blue Nile Academy
+              <span className="campus-label__dot" /> {profile.campus}
             </span>
             <button type="button" className="icon-button notification-button" aria-label="Notifications">
               <Icon name="bell" />
               <span />
+            </button>
+            <button
+              type="button"
+              className="profile-settings-trigger"
+              onClick={() => setSettingsOpen(true)}
+              aria-label={`Open profile settings for ${profile.name}`}
+            >
+              <span className="profile-settings-trigger__avatar">{profileInitials}</span>
+              <span className="profile-settings-trigger__label">Profile settings</span>
+              <Icon name="settings" size={16} />
             </button>
           </div>
         </header>
@@ -287,6 +320,13 @@ export function AppLayout({
           onClick={() => setMobileOpen(false)}
         />
       )}
+      {settingsOpen && (
+        <ProfileSettings
+          profile={profile}
+          onSave={onSaveProfile}
+          onClose={closeSettings}
+        />
+      )}
       {toast && (
         <div className="toast" role="status">
           <span>
@@ -299,7 +339,7 @@ export function AppLayout({
   )
 }
 
-export function ProductArtwork({ color, tone = 'shirt' }) {
+export function ProductArtwork({ color, tone = 'shirt', name = 'School uniform' }) {
   if (tone === 'trousers') {
     return (
       <svg className="product-art product-art--trousers" viewBox="0 0 180 150" role="img" aria-label="Uniform trousers">
@@ -308,11 +348,51 @@ export function ProductArtwork({ color, tone = 'shirt' }) {
       </svg>
     )
   }
+  if (tone === 'skirt') {
+    return (
+      <svg className="product-art product-art--skirt" viewBox="0 0 180 150" role="img" aria-label={name}>
+        <path d="M61 24h58l17 100H44L61 24Z" fill={color} />
+        <path d="M61 24h58M70 28l-8 92m25-92v92m25-92 8 92" fill="none" stroke="rgba(255,255,255,.38)" strokeWidth="3" />
+      </svg>
+    )
+  }
+  if (tone === 'cardigan') {
+    return (
+      <svg className="product-art product-art--cardigan" viewBox="0 0 180 150" role="img" aria-label={name}>
+        <path d="m54 23 24-10h24l24 10 23 23-17 17-13-13v76H61V50L48 63 31 46l23-23Z" fill={color} />
+        <path d="m78 13 12 22 12-22M90 35v89m-8-76h16" fill="none" stroke="rgba(255,255,255,.55)" strokeWidth="2.5" />
+        <circle cx="86" cy="53" r="1.8" fill="#fff" />
+        <circle cx="86" cy="68" r="1.8" fill="#fff" />
+        <circle cx="86" cy="83" r="1.8" fill="#fff" />
+        <circle cx="86" cy="98" r="1.8" fill="#fff" />
+      </svg>
+    )
+  }
+  if (tone === 'polo') {
+    return (
+      <svg className="product-art product-art--polo" viewBox="0 0 180 150" role="img" aria-label={name}>
+        <path d="m54 23 24-10h24l24 10 23 23-17 17-13-13v76H61V50L48 63 31 46l23-23Z" fill={color} />
+        <path d="m78 13 12 13 12-13-5 20H83l-5-20Zm12 20v91m-25-74v75m50-75v75" fill="none" stroke="rgba(255,255,255,.45)" strokeWidth="2.5" />
+        <path d="M90 33v16m0-10h6" fill="none" stroke="rgba(15,23,42,.45)" strokeWidth="2" />
+      </svg>
+    )
+  }
+  if (tone === 'oxford') {
+    return (
+      <svg className="product-art product-art--oxford" viewBox="0 0 180 150" role="img" aria-label={name}>
+        <path d="m54 23 24-10h24l24 10 23 23-17 17-13-13v76H61V50L48 63 31 46l23-23Z" fill={color} />
+        <path d="m78 13 12 16 12-16M90 29v95M65 50v75M115 50v75" fill="none" stroke="rgba(100,116,139,.48)" strokeWidth="2.5" />
+        <circle cx="94" cy="46" r="1.6" fill="#94a3b8" />
+        <circle cx="94" cy="62" r="1.6" fill="#94a3b8" />
+        <circle cx="94" cy="78" r="1.6" fill="#94a3b8" />
+      </svg>
+    )
+  }
   return (
-    <svg className="product-art" viewBox="0 0 180 150" role="img" aria-label="School uniform top">
-      <path d="m54 23 24-10h24l24 10 23 23-17 17-13-13v76H61V50L48 63 31 46l23-23Z" fill={color} />
+    <svg className="product-art product-art--sports-tee" viewBox="0 0 180 150" role="img" aria-label={name}>
+      <path d="m48 24 28-11h28l28 11 24 29-20 14-13-17v64H57V50L44 67 24 53l24-29Z" fill={color} />
       <path
-        d="m78 13 12 13 12-13M90 26v98M65 50v75M115 50v75"
+        d="m78 13 12 13 12-13M90 26v88M61 51v63M119 51v63"
         fill="none"
         stroke="rgba(255,255,255,.35)"
         strokeWidth="2.5"
