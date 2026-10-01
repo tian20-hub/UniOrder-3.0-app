@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Badge, Button, Icon, PageIntro, StatCard } from './Shared'
+import { formatEtbAsPhp } from '../utils/currency'
 
 const initialUsers = [
   { name: 'Amina Mekonnen', email: 'amina.m@bluenile.edu', role: 'Student', group: 'Grade 11 · Blue Nile', status: 'Active', initials: 'AM' },
@@ -9,12 +10,15 @@ const initialUsers = [
   { name: 'Liya Girma', email: 'liya.g@bluenile.edu', role: 'Student', group: 'Grade 9 · Blue Nile', status: 'Active', initials: 'LG' },
 ]
 
-export default function MotherAdmin({ onNotify }) {
+export default function MotherAdmin({ onNotify, onNavigate, inventory }) {
   const [users, setUsers] = useState(initialUsers)
   const [filter, setFilter] = useState('All users')
 
   const visibleUsers = filter === 'All users' ? users : users.filter((user) => user.role === filter)
   const activeUsers = users.filter((user) => user.status === 'Active').length
+  const inventoryUnits = inventory.reduce((total, item) => total + item.stock, 0)
+  const lowStockItems = inventory.filter((item) => item.stock <= item.minimum).length
+  const inventoryValue = inventory.reduce((total, item) => total + item.stock * item.price, 0)
 
   const toggleStatus = (email) => {
     setUsers((current) =>
@@ -74,6 +78,28 @@ export default function MotherAdmin({ onNotify }) {
           tone="purple"
         />
       </div>
+
+      <section className="surface admin-stock">
+        <div className="admin-stock__intro">
+          <div className="admin-stock__icon">
+            <Icon name="package" size={21} />
+          </div>
+          <div>
+            <span>INVENTORY CONTROL</span>
+            <h2>Campus stock</h2>
+            <p>Monitor inventory and add products or units to the stockroom.</p>
+          </div>
+        </div>
+        <div className="admin-stock__metrics">
+          <div><strong>{inventory.length}</strong><span>Products</span></div>
+          <div><strong>{inventoryUnits}</strong><span>Units in stock</span></div>
+          <div><strong>{lowStockItems}</strong><span>Low-stock alerts</span></div>
+          <div><strong>{formatEtbAsPhp(inventoryValue)}</strong><span>Stock value</span></div>
+        </div>
+        <Button onClick={() => onNavigate('/inventory')}>
+          <Icon name="package" size={17} /> Manage stock
+        </Button>
+      </section>
 
       <section className="surface admin-users">
         <PageIntro
@@ -187,4 +213,3 @@ export default function MotherAdmin({ onNotify }) {
     </div>
   )
 }
-

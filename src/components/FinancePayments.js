@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Badge, Button, Icon, PageIntro, StatCard } from './Shared'
 import { formatPhp } from '../utils/currency'
 
@@ -11,17 +11,38 @@ function paymentTone(status) {
 
 export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
   const [filter, setFilter] = useState('All orders')
+  const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState('newest')
 
   const pending = orders.filter((order) => order.status === 'Awaiting payment')
   const ready = orders.filter((order) => order.status === 'Ready for pickup')
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
+    const normalizedSearch = search.trim().toLowerCase()
+    const visibleOrders = orders.filter((order) => {
       if (filter === 'Needs confirmation') return order.status === 'Awaiting payment'
       if (filter === 'Ready to release') return order.status === 'Ready for pickup'
       return true
+    }).filter((order) => {
+      if (!normalizedSearch) return true
+      return [
+        order.id,
+        order.date,
+        order.status,
+        formatPhp(order.total),
+      ].some((value) => String(value).toLowerCase().includes(normalizedSearch))
     })
-  }, [orders, filter])
+
+    return [...visibleOrders].sort((first, second) => {
+      if (sortBy === 'oldest' || sortBy === 'newest') {
+        const difference = new Date(first.date).getTime() - new Date(second.date).getTime()
+        return sortBy === 'newest' ? -difference : difference
+      }
+      return sortBy === 'highest'
+        ? second.total - first.total
+        : first.total - second.total
+    })
+  }, [orders, filter, search, sortBy])
 
   const revenue = orders
     .filter((order) => order.status !== 'Awaiting payment')
@@ -91,22 +112,57 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
             <span>Confirm incoming payments, then release orders for pickup.</span>
           </div>
         </div>
-        <div className="table-toolbar">
-          <div className="table-tabs">
-            {['All orders', 'Needs confirmation', 'Ready to release'].map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={filter === item ? 'table-tab table-tab--active' : 'table-tab'}
-                onClick={() => setFilter(item)}
-              >
-                {item}
-                {item === 'Needs confirmation' && pending.length > 0 && <span>{pending.length}</span>}
-                {item === 'Ready to release' && ready.length > 0 && <span>{ready.length}</span>}
-              </button>
-            ))}
+        <div className="finance-queue-controls">
+          <div className="table-toolbar">
+            <div className="table-tabs" role="group" aria-label="Filter orders">
+              {['All orders', 'Needs confirmation', 'Ready to release'].map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={filter === item ? 'table-tab table-tab--active' : 'table-tab'}
+                  aria-pressed={filter === item}
+                  onClick={() => setFilter(item)}
+                >
+                  {item}
+                  {item === 'Needs confirmation' && pending.length > 0 && <span>{pending.length}</span>}
+                  {item === 'Ready to release' && ready.length > 0 && <span>{ready.length}</span>}
+                </button>
+              ))}
+            </div>
+            <span className="table-count">{filteredOrders.length} orders</span>
           </div>
-          <span className="table-count">{filteredOrders.length} orders</span>
+
+          <div className="finance-queue-tools">
+            <div className="table-search finance-search">
+              <Icon name="search" size={16} />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search order, date, status, amount"
+                aria-label="Search payment orders"
+              />
+              {search && (
+                <button
+                  type="button"
+                  className="finance-search__clear"
+                  onClick={() => setSearch('')}
+                  aria-label="Clear search"
+                >
+                  <Icon name="close" size={14} />
+                </button>
+              )}
+            </div>
+            <label className="finance-sort">
+              <span>Sort by</span>
+              <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="highest">Highest amount</option>
+                <option value="lowest">Lowest amount</option>
+              </select>
+            </label>
+          </div>
         </div>
         <div className="table-wrap">
           <table className="data-table finance-table">
@@ -170,7 +226,9 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
               {!filteredOrders.length && (
                 <tr>
                   <td colSpan="6" className="table-empty">
-                    Nothing waiting in this queue.
+                    {search
+                      ? `No orders match “${search}”. Try another search.`
+                      : 'Nothing waiting in this queue.'}
                   </td>
                 </tr>
               )}

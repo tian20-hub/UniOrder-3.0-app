@@ -8,6 +8,7 @@ import FinancePayments from './components/FinancePayments'
 import MotherAdmin from './components/MotherAdmin'
 import Reports from './components/Reports'
 import { AppLayout } from './components/Shared'
+import { readInventory } from './data/inventory'
 import { convertEtbToPhp } from './utils/currency'
 
 const pageDetails = {
@@ -64,6 +65,7 @@ export default function App() {
   const [role, setRole] = useState('Student')
   const [signedIn, setSignedIn] = useState(false)
   const [profile, setProfile] = useState(readProfile)
+  const [inventory, setInventory] = useState(readInventory)
   const [orders, setOrders] = useState([
     { id: 'ORD-24018', items: '2 items', date: 'Oct 01, 2026', total: convertEtbToPhp(1250), status: 'Ready for pickup' },
     { id: 'ORD-23972', items: '1 item', date: 'Sep 24, 2026', total: convertEtbToPhp(680), status: 'Processing' },
@@ -94,6 +96,15 @@ export default function App() {
     const timeout = window.setTimeout(() => setToast(''), 3000)
     return () => window.clearTimeout(timeout)
   }, [toast])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('uniorder-inventory', JSON.stringify(inventory))
+    } catch (error) {
+      console.error('Unable to save inventory changes.', error)
+      setToast('Could not save inventory changes. Please check your browser storage.')
+    }
+  }, [inventory])
 
   const handleSignIn = (selectedRole) => {
     setRole(selectedRole)
@@ -140,7 +151,7 @@ export default function App() {
   if (path === '/reset-password') return <ResetPassword onNavigate={navigate} />
 
   const detail = pageDetails[path] || pageDetails['/catalog']
-  const pageProps = { onNotify: setToast }
+  const pageProps = { onNotify: setToast, inventory, onUpdateInventory: setInventory }
   let page
 
   switch (path) {
@@ -154,7 +165,7 @@ export default function App() {
       page = <FinancePayments orders={orders} onUpdateOrders={setOrders} {...pageProps} />
       break
     case '/admin':
-      page = <MotherAdmin {...pageProps} />
+      page = <MotherAdmin onNavigate={navigate} {...pageProps} />
       break
     case '/reports':
       page = <Reports orders={orders} />
