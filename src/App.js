@@ -8,6 +8,7 @@ import FinancePayments from './components/FinancePayments'
 import MotherAdmin from './components/MotherAdmin'
 import Reports from './components/Reports'
 import { AppLayout } from './components/Shared'
+import { courses } from './data/courses'
 import { readInventory } from './data/inventory'
 import { convertEtbToPhp } from './utils/currency'
 
@@ -22,11 +23,21 @@ const pageDetails = {
 
 const defaultProfile = {
   name: 'Amina Mekonnen',
+  schoolId: '2024-00001',
   email: 'amina@bluenile.edu',
   grade: 'Grade 11',
-  campus: 'Blue Nile Academy',
+  course: 'BS Information Technology',
   orderUpdates: true,
   promotions: false,
+}
+
+function readDarkMode() {
+  try {
+    return window.localStorage.getItem('uniorder-dark-mode') === 'true'
+  } catch (error) {
+    console.error('Unable to load dark mode preference.', error)
+    return false
+  }
 }
 
 function readProfile() {
@@ -39,9 +50,10 @@ function readProfile() {
 
     return {
       name: typeof profile.name === 'string' ? profile.name : defaultProfile.name,
+      schoolId: typeof profile.schoolId === 'string' ? profile.schoolId : defaultProfile.schoolId,
       email: typeof profile.email === 'string' ? profile.email : defaultProfile.email,
       grade: typeof profile.grade === 'string' ? profile.grade : defaultProfile.grade,
-      campus: typeof profile.campus === 'string' ? profile.campus : defaultProfile.campus,
+      course: courses.includes(profile.course) ? profile.course : defaultProfile.course,
       orderUpdates: typeof profile.orderUpdates === 'boolean' ? profile.orderUpdates : defaultProfile.orderUpdates,
       promotions: typeof profile.promotions === 'boolean' ? profile.promotions : defaultProfile.promotions,
     }
@@ -65,11 +77,12 @@ export default function App() {
   const [role, setRole] = useState('Student')
   const [signedIn, setSignedIn] = useState(false)
   const [profile, setProfile] = useState(readProfile)
+  const [darkMode, setDarkMode] = useState(readDarkMode)
   const [inventory, setInventory] = useState(readInventory)
   const [orders, setOrders] = useState([
-    { id: 'ORD-24018', items: '2 items', date: 'Oct 01, 2026', total: convertEtbToPhp(1250), status: 'Ready for pickup' },
-    { id: 'ORD-23972', items: '1 item', date: 'Sep 24, 2026', total: convertEtbToPhp(680), status: 'Processing' },
-    { id: 'ORD-23891', items: '3 items', date: 'Sep 18, 2026', total: convertEtbToPhp(1740), status: 'Completed' },
+    { id: 'ORD-24018', items: '2 items', date: 'Oct 01, 2026', submittedAt: '2026-10-01T09:42:00+08:00', submittedBy: 'Amina Mekonnen', total: convertEtbToPhp(1250), status: 'Ready for pickup' },
+    { id: 'ORD-23972', items: '1 item', date: 'Sep 24, 2026', submittedAt: '2026-09-24T14:18:00+08:00', submittedBy: 'Daniel Kebede', total: convertEtbToPhp(680), status: 'Processing' },
+    { id: 'ORD-23891', items: '3 items', date: 'Sep 18, 2026', submittedAt: '2026-09-18T11:07:00+08:00', submittedBy: 'Sara Abebe', total: convertEtbToPhp(1740), status: 'Completed' },
   ])
   const [toast, setToast] = useState('')
 
@@ -96,6 +109,16 @@ export default function App() {
     const timeout = window.setTimeout(() => setToast(''), 3000)
     return () => window.clearTimeout(timeout)
   }, [toast])
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = darkMode ? 'dark' : 'light'
+    try {
+      window.localStorage.setItem('uniorder-dark-mode', String(darkMode))
+    } catch (error) {
+      console.error('Unable to save dark mode preference.', error)
+      setToast('Could not save your display preference.')
+    }
+  }, [darkMode])
 
   useEffect(() => {
     try {
@@ -130,6 +153,8 @@ export default function App() {
       id: `ORD-${Math.floor(24019 + Math.random() * 700)}`,
       items: `${itemNames.length} ${itemNames.length === 1 ? 'item' : 'items'}`,
       date: new Intl.DateTimeFormat('en', { month: 'short', day: '2-digit', year: 'numeric' }).format(new Date()),
+      submittedAt: new Date().toISOString(),
+      submittedBy: profile.name,
       total,
       status: 'Awaiting payment',
     }
@@ -156,7 +181,7 @@ export default function App() {
 
   switch (path) {
     case '/orders':
-      page = <OrderHistory orders={orders} />
+      page = <OrderHistory orders={orders} onNotify={setToast} />
       break
     case '/inventory':
       page = <Inventory {...pageProps} />
@@ -184,6 +209,13 @@ export default function App() {
       role={role}
       profile={profile}
       onSaveProfile={saveProfile}
+      orders={orders}
+      darkMode={darkMode}
+      onToggleDarkMode={() => setDarkMode((current) => !current)}
+      onChangePassword={() => {
+        setSignedIn(false)
+        navigate('/reset-password')
+      }}
       onRoleChange={(nextRole) => {
         setRole(nextRole)
         navigate(roleHome(nextRole))

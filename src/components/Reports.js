@@ -88,7 +88,7 @@ function makeMonthlySeries(orders, period) {
   }))
 }
 
-function OrdersChart({ data, metric, chartType, onSelect, selectedIndex }) {
+function OrdersChart({ data, metric, chartType, onSelect, selectedIndex, animationKey }) {
   if (!data.length) {
     return <div className="reports-chart__empty">No dated orders to chart for this period.</div>
   }
@@ -107,7 +107,12 @@ function OrdersChart({ data, metric, chartType, onSelect, selectedIndex }) {
       </div>
 
       {chartType === 'bar' ? (
-        <div className="reports-bars" role="group" aria-label={`${metricLabel} by month`}>
+        <div
+          key={animationKey}
+          className="reports-bars reports-bars--enter"
+          role="group"
+          aria-label={`${metricLabel} by month`}
+        >
           {data.map((item, index) => {
             const percent = item[metric] ? Math.max((item[metric] / maxValue) * 100, 2) : 0
             return (
@@ -133,7 +138,7 @@ function OrdersChart({ data, metric, chartType, onSelect, selectedIndex }) {
           })}
         </div>
       ) : (
-        <div className="reports-lines">
+        <div key={animationKey} className="reports-lines reports-lines--enter">
           <svg
             className="reports-lines__svg"
             viewBox="0 0 600 220"
@@ -147,6 +152,7 @@ function OrdersChart({ data, metric, chartType, onSelect, selectedIndex }) {
             {data.length > 1 && (
               <polyline
                 className={`reports-lines__path reports-lines__path--${metric}`}
+                pathLength="1"
                 points={data.map((item, index) => {
                   const x = 50 + (index * 530) / (data.length - 1)
                   const y = 195 - (item[metric] / maxValue) * 155
@@ -161,15 +167,23 @@ function OrdersChart({ data, metric, chartType, onSelect, selectedIndex }) {
                 <g key={item.label}>
                   <circle
                     className={`reports-lines__point reports-lines__point--${metric}${selectedIndex === index ? ' is-selected' : ''}`}
+                    style={{ animationDelay: `${60 + index * 50}ms` }}
                     cx={x}
                     cy={y}
                     r="6"
                     tabIndex="0"
                     role="button"
                     aria-label={`${item.label}: ${metric === 'sales' ? money(item.sales) : `${item.orders} orders`}`}
+                    aria-pressed={selectedIndex === index}
                     onMouseEnter={() => onSelect(index)}
                     onFocus={() => onSelect(index)}
                     onClick={() => onSelect(index)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        onSelect(index)
+                      }
+                    }}
                   />
                   <text className="reports-lines__label" x={x} y="218" textAnchor="middle">
                     {item.label}
@@ -196,6 +210,7 @@ export default function Reports({ orders }) {
   const [metric, setMetric] = useState('sales')
   const [selectedMonth, setSelectedMonth] = useState(null)
   const [selectedStatus, setSelectedStatus] = useState(null)
+  const [pieRevision, setPieRevision] = useState(0)
 
   const periodOrders = useMemo(() => getDateRange(orders, period), [orders, period])
   const chartData = useMemo(() => makeMonthlySeries(periodOrders, period), [periodOrders, period])
@@ -236,11 +251,15 @@ export default function Reports({ orders }) {
 
   const toggleStatus = (status) => {
     setSelectedStatus((current) => (current === status ? null : status))
+    setPieRevision((current) => current + 1)
   }
+
+  const activeStatusIndex = statusData.findIndex((item) => item.label === selectedStatus)
+  const chartAnimationKey = `${period}-${metric}-${chartType}-${chartData.map((item) => `${item.label}:${item[metric]}`).join('|')}`
 
   return (
     <div className="page-stack">
-      <div className="report-toolbar">
+      <div className="report-toolbar reports-toolbar">
         <span>Reporting period</span>
         <label className="select-control">
           <select value={period} onChange={(event) => changePeriod(event.target.value)}>
@@ -255,7 +274,7 @@ export default function Reports({ orders }) {
         </button>
       </div>
 
-      <div className="stats-grid">
+      <div className="stats-grid reports-stats">
         <StatCard
           label="Total sales"
           value={money(sales)}
@@ -286,6 +305,46 @@ export default function Reports({ orders }) {
         />
       </div>
 
+      <section className="reports-statistics surface" aria-labelledby="reports-statistics-title">
+        <div className="reports-statistics__heading">
+          <div>
+            <span>LIVE STATISTICS</span>
+            <h2 id="reports-statistics-title">Orders by status</h2>
+          </div>
+          <p>Select a status to highlight it in the chart.</p>
+        </div>
+        <div className="reports-statistics__track" role="group" aria-label="Interactive order status statistics">
+          {statusData.map((item) => {
+            const percentage = totalStatusCount
+              ? Math.round((item.count / totalStatusCount) * 100)
+              : 0
+            return (
+              <button
+                key={item.label}
+                type="button"
+                className={`reports-statistics__item${selectedStatus === item.label ? ' is-selected' : ''}`}
+                style={{ '--stat-color': item.color }}
+                aria-pressed={selectedStatus === item.label}
+                onClick={() => toggleStatus(item.label)}
+              >
+                <span className="reports-statistics__label">{item.label}</span>
+                <strong>{numberFormat.format(item.count)} <small>· {percentage}%</small></strong>
+                <span className="reports-statistics__meter" aria-hidden="true">
+                  <i key={`${period}-${item.count}`} style={{ width: `${percentage}%` }} />
+                </span>
+              </button>
+            )
+          })}
+          <span
+            className={`reports-statistics__indicator${activeStatusIndex < 0 ? ' is-hidden' : ''}`}
+            style={{
+              transform: `translateX(calc(${Math.max(activeStatusIndex, 0) * 100}% + ${Math.max(activeStatusIndex, 0) * 0.5}rem))`,
+            }}
+            aria-hidden="true"
+          />
+        </div>
+      </section>
+
       <div className="report-grid">
         <section className="surface chart-surface">
           <PageIntro
@@ -304,7 +363,10 @@ export default function Reports({ orders }) {
                   type="button"
                   className={chartType === option.value ? 'is-active' : ''}
                   aria-pressed={chartType === option.value}
-                  onClick={() => setChartType(option.value)}
+                  onClick={() => {
+                    setChartType(option.value)
+                    setSelectedMonth(null)
+                  }}
                 >
                   {option.label}
                 </button>
@@ -340,6 +402,7 @@ export default function Reports({ orders }) {
             chartType={chartType}
             selectedIndex={selectedMonth}
             onSelect={setSelectedMonth}
+            animationKey={chartAnimationKey}
           />
           <div className="chart-foot">
             <span><Icon name="chart" size={15} /> Based on recorded orders</span>
@@ -355,7 +418,8 @@ export default function Reports({ orders }) {
           />
           <div className="donut-wrap">
             <div
-              className={`donut-chart reports-donut${selectedStatus ? ' is-filtered' : ''}`}
+              key={`${period}-${pieRevision}`}
+              className={`donut-chart reports-donut reports-donut--rotate${selectedStatus ? ' is-filtered' : ''}`}
               style={{ background: pieGradient }}
               role="img"
               aria-label={`Pie chart of ${totalStatusCount} orders by status`}
@@ -380,10 +444,11 @@ export default function Reports({ orders }) {
                     key={item.label}
                     type="button"
                     className={`reports-status${isSelected ? ' is-selected' : ''}`}
+                    style={{ '--status-color': item.color }}
                     aria-pressed={isSelected}
                     onClick={() => toggleStatus(item.label)}
                   >
-                    <i style={{ '--status-color': item.color }} />
+                    <i />
                     <span>{item.label}</span>
                     <strong>{item.count} · {percentage}%</strong>
                   </button>

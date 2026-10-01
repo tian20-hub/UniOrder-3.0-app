@@ -89,7 +89,7 @@ export default function Inventory({ onNotify, inventory: items, onUpdateInventor
 
   return (
     <div className="page-stack">
-      <div className="stats-grid">
+      <div className="stats-grid inventory-stats">
         <StatCard
           label="Total products"
           value={items.length}
@@ -132,12 +132,13 @@ export default function Inventory({ onNotify, inventory: items, onUpdateInventor
           }
         />
         <div className="table-toolbar">
-          <div className="table-tabs">
+          <div className="table-tabs" role="group" aria-label="Filter inventory stock">
             {['All stock', 'Low stock'].map((item) => (
               <button
                 key={item}
                 type="button"
                 className={filter === item ? 'table-tab table-tab--active' : 'table-tab'}
+                aria-pressed={filter === item}
                 onClick={() => setFilter(item)}
               >
                 {item}

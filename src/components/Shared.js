@@ -164,10 +164,14 @@ export function AppLayout({
   subtitle,
   role,
   profile,
+  orders,
   onSaveProfile,
   onRoleChange,
   onNavigate,
   onSignOut,
+  onChangePassword,
+  darkMode,
+  onToggleDarkMode,
   toast,
   children,
 }) {
@@ -252,7 +256,7 @@ export function AppLayout({
             <div className="avatar">{role === 'Student' ? profileInitials : role.slice(0, 2).toUpperCase()}</div>
             <div className="sidebar__profile-text">
               <strong>{role === 'Student' ? profile.name : `${role} account`}</strong>
-              <span>{role === 'Student' ? `${profile.grade} · ${profile.campus}` : 'Demo workspace'}</span>
+              <span>{role === 'Student' ? profile.schoolId : 'Demo workspace'}</span>
             </div>
             <button
               type="button"
@@ -280,9 +284,6 @@ export function AppLayout({
             Workspace <span>/</span> <strong>{title}</strong>
           </div>
           <div className="topbar__actions">
-            <span className="campus-label">
-              <span className="campus-label__dot" /> {profile.campus}
-            </span>
             <button type="button" className="icon-button notification-button" aria-label="Notifications">
               <Icon name="bell" />
               <span />
@@ -323,7 +324,12 @@ export function AppLayout({
       {settingsOpen && (
         <ProfileSettings
           profile={profile}
+          orders={orders}
+          darkMode={darkMode}
+          onToggleDarkMode={onToggleDarkMode}
           onSave={onSaveProfile}
+          onChangePassword={onChangePassword}
+          onSignOut={onSignOut}
           onClose={closeSettings}
         />
       )}

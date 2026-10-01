@@ -9,6 +9,27 @@ function paymentTone(status) {
   return 'amber'
 }
 
+function submittedTimestamp(order) {
+  const timestamp = order.submittedAt || order.date
+  const parsed = new Date(timestamp)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function formatSubmittedAt(order) {
+  if (!order.submittedAt) {
+    return order.date ? `${order.date} · time not recorded` : 'Time not recorded'
+  }
+  const timestamp = submittedTimestamp(order)
+  if (!timestamp) return 'Time not recorded'
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(timestamp)
+}
+
 export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
   const [filter, setFilter] = useState('All orders')
   const [search, setSearch] = useState('')
@@ -28,6 +49,8 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
       return [
         order.id,
         order.date,
+        order.submittedBy || 'Student',
+        formatSubmittedAt(order),
         order.status,
         formatPhp(order.total),
       ].some((value) => String(value).toLowerCase().includes(normalizedSearch))
@@ -35,7 +58,7 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
 
     return [...visibleOrders].sort((first, second) => {
       if (sortBy === 'oldest' || sortBy === 'newest') {
-        const difference = new Date(first.date).getTime() - new Date(second.date).getTime()
+        const difference = (submittedTimestamp(first)?.getTime() || 0) - (submittedTimestamp(second)?.getTime() || 0)
         return sortBy === 'newest' ? -difference : difference
       }
       return sortBy === 'highest'
@@ -61,7 +84,7 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
 
   return (
     <div className="page-stack">
-      <div className="stats-grid">
+      <div className="stats-grid finance-stats">
         <StatCard
           label="Collected this term"
           value={formatPhp(revenue)}
@@ -109,7 +132,7 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
           </div>
           <div>
             <strong>{pending.length + ready.length} orders need your attention</strong>
-            <span>Confirm incoming payments, then release orders for pickup.</span>
+            <span>Review who submitted each order, when it was sent, and its total before confirming payment or release.</span>
           </div>
         </div>
         <div className="finance-queue-controls">
@@ -139,7 +162,7 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search order, date, status, amount"
+                placeholder="Search order, student, date, status, amount"
                 aria-label="Search payment orders"
               />
               {search && (
@@ -169,8 +192,8 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
             <thead>
               <tr>
                 <th>ORDER</th>
-                <th>DATE</th>
-                <th>STUDENT</th>
+                <th>SUBMITTED</th>
+                <th>SENT BY</th>
                 <th>AMOUNT</th>
                 <th>STATUS</th>
                 <th>ACTION</th>
@@ -178,17 +201,27 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
             </thead>
             <tbody>
               {filteredOrders.map((order, index) => (
-                <tr key={order.id}>
+                <tr key={order.id} className="finance-order-row">
                   <td>
                     <strong className="order-id">{order.id}</strong>
+                    <span className="finance-order-items">{order.items}</span>
                   </td>
-                  <td>{order.date}</td>
+                  <td>
+                    <time dateTime={order.submittedAt || undefined} title={order.date}>
+                      {formatSubmittedAt(order)}
+                    </time>
+                  </td>
                   <td>
                     <div className="person-cell">
                       <span className={`mini-avatar mini-avatar--${index % 3}`}>
-                        {['AM', 'DK', 'SA'][index % 3]}
+                        {(order.submittedBy || 'Student')
+                          .trim()
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((part) => part[0]?.toUpperCase() || '')
+                          .join('')}
                       </span>
-                      {['Amina Mekonnen', 'Daniel Kebede', 'Sara Abebe'][index % 3]}
+                      <span className="finance-order-sender">{order.submittedBy || 'Student account'}</span>
                     </div>
                   </td>
                   <td>
