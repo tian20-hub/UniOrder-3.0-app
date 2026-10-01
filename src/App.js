@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import Login from './components/Login'
-import SignUp from './components/SignUp'
 import ResetPassword from './components/ResetPassword'
 import StudentCatalog from './components/StudentCatalog'
 import OrderHistory from './components/OrderHistory'
@@ -82,16 +81,16 @@ export default function App() {
     navigate('/orders')
   }
 
-  if (path === '/login') {
+  if (path === '/login' || path === '/signup') {
     return (
       <Login
         onSignIn={handleSignIn}
         onNavigate={navigate}
         toast={toast}
+        initialMode={path === '/signup' ? 'signup' : 'login'}
       />
     )
   }
-  if (path === '/signup') return <SignUp onNavigate={navigate} onSignUp={handleSignIn} />
   if (path === '/reset-password') return <ResetPassword onNavigate={navigate} />
 
   const detail = pageDetails[path] || pageDetails['/catalog']
@@ -142,4 +141,3 @@ export default function App() {
     </AppLayout>
   )
 }
-
