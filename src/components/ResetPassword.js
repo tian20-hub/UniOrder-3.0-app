@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Button } from './Shared'
 
 export default function ResetPassword({ onNavigate }) {
@@ -38,67 +38,61 @@ export default function ResetPassword({ onNavigate }) {
     onNavigate('/login')
   }
 
-  return (
-    <main className="auth-page auth-page--compact">
-      <section className="auth-visual">
-        <a className="brand brand--light" href="/" onClick={(event) => event.preventDefault()}>
-          <span className="brand__mark">u</span>
-          <span>
-            uniorder<span className="brand__dot">.</span>
-          </span>
-        </a>
-        <div className="auth-visual__content">
-          <div className="auth-kicker">
-            <span /> HERE TO HELP
-          </div>
-          <h1>
-            Let's get you<br />back on track.
-          </h1>
-          <p>A quick reset and you'll be back to taking care of your school day.</p>
-          <div className="reset-steps">
-            <div className={sent ? 'is-done' : 'is-current'}>
-              <i>1</i>
-              <span>Get a reset code</span>
-            </div>
-            <div className={verified ? 'is-done' : sent ? 'is-current' : ''}>
-              <i>2</i>
-              <span>Verify your email</span>
-            </div>
-            <div className={verified ? 'is-current' : ''}>
-              <i>3</i>
-              <span>Set a new password</span>
-            </div>
-          </div>
-        </div>
-        <div className="auth-visual__footer">
-          A better school shop starts here. <span>© 2026 Uniorder</span>
-        </div>
-      </section>
+  const title = verified
+    ? 'Choose a new password'
+    : sent
+      ? 'Check your inbox'
+      : 'Forgot your password?'
+  const description = verified
+    ? 'Choose a secure password for your account.'
+    : sent
+      ? `We sent a one-time code to ${email}. Enter it below to continue.`
+      : 'Enter your school email and we’ll send you a one-time reset code.'
 
-      <section className="auth-panel">
-        <div className="auth-panel__inner">
-          <div className="auth-mobile-brand brand">
-            <span className="brand__mark">u</span>
-            <span>
-              uniorder<span className="brand__dot">.</span>
-            </span>
+  return (
+    <main className="login-page">
+      <section className="login-card login-card--recovery" aria-label="Reset your Uniorder password">
+        <aside className="login-card__welcome" aria-hidden="true">
+          <div className="login-card__welcome-glow" />
+          <div className="login-card__welcome-copy login-card__welcome-copy--recovery">
+            <span className="login-card__welcome-kicker">ACCOUNT RECOVERY</span>
+            <h2>LET&apos;S GET<br />YOU BACK.</h2>
+            <p>Reset your password and get back to your school day.</p>
+            <div className="recovery-steps">
+              <span className={!sent ? 'is-current' : 'is-done'}>1</span>
+              <i className={sent ? 'is-done' : ''} />
+              <span className={sent && !verified ? 'is-current' : verified ? 'is-done' : ''}>2</span>
+              <i className={verified ? 'is-done' : ''} />
+              <span className={verified ? 'is-current' : ''}>3</span>
+            </div>
+            <span className="login-card__welcome-footer">EMAIL · VERIFY · RESET</span>
           </div>
-          <button type="button" className="back-link" onClick={() => onNavigate('/login')}>
+        </aside>
+
+        <section className="login-card__view login-card__view--login is-active">
+          <a
+            className="login-brand"
+            href="/"
+            onClick={(event) => event.preventDefault()}
+            aria-label="Uniorder home"
+          >
+            <span className="login-brand__mark">u</span>
+            <span>uniorder<span className="login-brand__dot">.</span></span>
+          </a>
+
+          <button type="button" className="login-link recovery-back" onClick={() => onNavigate('/login')}>
             ← Back to sign in
           </button>
-          <div className="auth-panel__eyebrow">ACCOUNT RECOVERY</div>
-          <h2>{verified ? 'Choose a new password' : sent ? 'Check your inbox' : 'Forgot your password?'}</h2>
-          <p className="auth-panel__lead">
-            {verified
-              ? 'Choose a secure password for your account.'
-              : sent
-              ? `We sent a one-time code to ${email}. Enter it below to continue.`
-              : 'Enter your school email and we’ll send you a one-time reset code.'}
-          </p>
+
+          <div className="login-card__heading">
+            <span className="login-eyebrow">ACCOUNT RECOVERY</span>
+            <h1>{title}</h1>
+            <p>{description}</p>
+          </div>
 
           {!sent && (
-            <form className="auth-form" onSubmit={sendCode}>
-              <label>
+            <form className="login-form" onSubmit={sendCode}>
+              <label className="login-field">
                 <span>Email address</span>
                 <input
                   type="email"
@@ -106,32 +100,35 @@ export default function ResetPassword({ onNavigate }) {
                   placeholder="you@bluenile.edu"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
+                  required
                 />
               </label>
-              <Button type="submit" className="auth-submit">
-                Send reset code <span>→</span>
+              <Button type="submit" className="login-submit">
+                Send reset code <span aria-hidden="true">→</span>
               </Button>
             </form>
           )}
 
           {sent && !verified && (
-            <form className="auth-form" onSubmit={verifyCode}>
-              <label>
+            <form className="login-form" onSubmit={verifyCode}>
+              <label className="login-field">
                 <span>One-time code</span>
                 <input
                   inputMode="numeric"
-                  maxLength="6"
+                  maxLength={6}
+                  autoComplete="one-time-code"
                   placeholder="Enter your 6-digit code"
                   value={code}
                   onChange={(event) => setCode(event.target.value)}
+                  required
                 />
               </label>
-              <Button type="submit" className="auth-submit">
-                Verify code <span>→</span>
+              <Button type="submit" className="login-submit">
+                Verify code <span aria-hidden="true">→</span>
               </Button>
               <button
                 type="button"
-                className="text-button resend-link"
+                className="login-link recovery-resend"
                 onClick={() => setMessage('A fresh code has been sent.')}
               >
                 Resend code
@@ -140,8 +137,8 @@ export default function ResetPassword({ onNavigate }) {
           )}
 
           {verified && (
-            <form className="auth-form" onSubmit={savePassword}>
-              <label>
+            <form className="login-form" onSubmit={savePassword}>
+              <label className="login-field">
                 <span>New password</span>
                 <input
                   type="password"
@@ -149,23 +146,29 @@ export default function ResetPassword({ onNavigate }) {
                   placeholder="At least 6 characters"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
+                  required
                 />
               </label>
-              <Button type="submit" className="auth-submit">
-                Save new password <span>→</span>
+              <Button type="submit" className="login-submit">
+                Save new password <span aria-hidden="true">→</span>
               </Button>
             </form>
           )}
 
           {message && (
-            <div className={message.includes('sent') ? 'form-success' : 'form-error'} role="status">
+            <div
+              className={`recovery-message${message.includes('sent') ? ' recovery-message--success' : ''}`}
+              role="status"
+            >
               {message}
             </div>
           )}
-          <p className="auth-demo-note">Demo flow — enter any email and a code to continue.</p>
-        </div>
+
+          <p className="recovery-note">Demo flow — enter any email and a code to continue.</p>
+        </section>
       </section>
+
+      <p className="login-page__footer">© 2026 Uniorder. Made for your school day.</p>
     </main>
   )
 }
-
