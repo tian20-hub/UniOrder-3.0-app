@@ -1,46 +1,57 @@
 import React, { useMemo, useState } from 'react'
-import { Badge, Button, Icon, PageIntro, ProductArtwork } from './Shared'
+import { Icon, PageIntro } from './Shared'
 
-const products = [
-  { id: 1, name: 'Classic polo shirt', category: 'Tops', colorName: 'Sky blue', color: '#78a8ca', price: 420, stock: 24, sizes: 'XS – XXL' },
-  { id: 2, name: 'Everyday uniform trousers', category: 'Bottoms', colorName: 'Deep navy', color: '#263c62', price: 680, stock: 18, sizes: '26 – 36' },
-  { id: 3, name: 'Campus cardigan', category: 'Layers', colorName: 'Academy navy', color: '#253958', price: 950, stock: 12, sizes: 'XS – XXL' },
-  { id: 4, name: 'Pleated uniform skirt', category: 'Bottoms', colorName: 'Slate', color: '#52627b', price: 610, stock: 9, sizes: '24 – 34', artwork: 'trousers' },
-  { id: 5, name: 'Long sleeve oxford', category: 'Tops', colorName: 'Cloud white', color: '#e8e9e7', price: 520, stock: 31, sizes: 'XS – XXL' },
-  { id: 6, name: 'House sports tee', category: 'Sportswear', colorName: 'Forest green', color: '#628170', price: 360, stock: 16, sizes: 'XS – XXL' },
+const courses = [
+  'BS Nursing',
+  'BS Medical Laboratory Sciences',
+  'BS Psychology',
+  'BS Radiologic Technology',
+  'BS Accountancy',
+  'BS Business Administration – Financial Management',
+  'BS Business Administration – Marketing Management',
+  'BS Hospitality Management',
+  'BS Tourism Management',
+  'Bachelor of Elementary Education',
+  'Bachelor of Secondary Education – Filipino',
+  'Bachelor of Secondary Education – English',
+  'BS Criminology',
+  'BS Information Technology',
 ]
 
-const categories = ['All items', 'Tops', 'Bottoms', 'Layers', 'Sportswear']
+const categories = ['All programs', 'BS programs', 'Education']
 
-export default function StudentCatalog({ onCreateOrder, onNotify }) {
-  const [category, setCategory] = useState('All items')
+function courseCategory(course) {
+  return course.startsWith('BS ') ? 'BS programs' : 'Education'
+}
+
+export default function StudentCatalog({ onNotify }) {
+  const [category, setCategory] = useState('All programs')
   const [search, setSearch] = useState('')
-  const [cart, setCart] = useState([])
+  const [selectedCourse, setSelectedCourse] = useState('')
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesCategory = category === 'All items' || product.category === category
-      const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase())
-      return matchesCategory && matchesSearch
+  const filteredCourses = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return courses.filter((course) => {
+      const matchesCategory = category === 'All programs' || courseCategory(course) === category
+      return matchesCategory && course.toLowerCase().includes(query)
     })
   }, [category, search])
 
-  const total = cart.reduce((sum, item) => sum + item.price, 0)
-
-  const addToCart = (product) => {
-    setCart((current) => [...current, product])
-    onNotify(`${product.name} added to your bag.`)
+  const toggleCourse = (course) => {
+    const nextCourse = selectedCourse === course ? '' : course
+    setSelectedCourse(nextCourse)
+    onNotify(nextCourse ? `${course} selected.` : `${course} selection cleared.`)
   }
 
   return (
     <div className="catalog-page">
       <section className="term-banner">
         <div className="term-banner__copy">
-          <span className="banner-label">NEW TERM · 2026/27</span>
+          <span className="banner-label">UNDERGRADUATE PROGRAMS</span>
           <h2>
-            Ready for the<br />year ahead?
+            Find the path<br />that fits you.
           </h2>
-          <p>Everything you need for a confident start, picked for Blue Nile Academy.</p>
+          <p>Explore the available programs and select the one you are interested in.</p>
           <a
             href="#catalog-items"
             onClick={(event) => {
@@ -48,53 +59,57 @@ export default function StudentCatalog({ onCreateOrder, onNotify }) {
               document.getElementById('catalog-items')?.scrollIntoView({ behavior: 'smooth' })
             }}
           >
-            Shop the collection <Icon name="arrow" size={16} />
+            Browse programs <Icon name="arrow" size={16} />
           </a>
         </div>
-        <div className="term-banner__art">
-          <span className="banner-sun" />
-          <div className="banner-shirt banner-shirt--back" />
-          <div className="banner-shirt banner-shirt--front">
-            <span />
-          </div>
-          <div className="banner-sticker">
-            BACK<br />TO<br />SCHOOL
-          </div>
-          <div className="banner-caption">
-            <span>01 / 03</span>
-            <i />
+        <div className="term-banner__art" aria-hidden="true">
+          <div className="program-highlight">
+            <span>AVAILABLE PROGRAMS</span>
+            <strong>{courses.length}</strong>
+            <i>Find your next step</i>
           </div>
         </div>
       </section>
 
       <div className="catalog-meta">
         <div>
-          <span className="online-dot" /> Orders open for Term 1 <span className="meta-divider">·</span> Pickup at the campus shop
+          <span className="online-dot" /> Program selection open <span className="meta-divider">·</span> Explore your options
         </div>
         <div className="catalog-meta__right">
-          Student offer <strong>Save 10% on bundles</strong>
+          Available programs <strong>{courses.length}</strong>
         </div>
       </div>
 
       <div className="catalog-section" id="catalog-items">
         <PageIntro
-          eyebrow="THE ESSENTIALS"
-          title="Find your fit"
-          subtitle="School-approved favorites, ready when you are."
+          eyebrow="PROGRAM CATALOG"
+          title="Explore programs"
+          subtitle="Search and choose from the available degree programs."
           action={
             <div className="catalog-search">
               <Icon name="search" size={17} />
               <input
-                aria-label="Search items"
-                placeholder="Search items"
+                type="search"
+                aria-label="Search programs"
+                placeholder="Search programs"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
+              {search && (
+                <button
+                  type="button"
+                  className="catalog-search__clear"
+                  aria-label="Clear program search"
+                  onClick={() => setSearch('')}
+                >
+                  ×
+                </button>
+              )}
             </div>
           }
         />
         <div className="catalog-toolbar">
-          <div className="category-tabs" role="tablist" aria-label="Product categories">
+          <div className="category-tabs" role="tablist" aria-label="Program categories">
             {categories.map((item) => (
               <button
                 key={item}
@@ -108,80 +123,64 @@ export default function StudentCatalog({ onCreateOrder, onNotify }) {
               </button>
             ))}
           </div>
-          <div className="items-count">{filteredProducts.length} items</div>
+          <div className="items-count" aria-live="polite">
+            {filteredCourses.length} {filteredCourses.length === 1 ? 'program' : 'programs'}
+          </div>
         </div>
 
-        {filteredProducts.length ? (
-          <div className="product-grid">
-            {filteredProducts.map((product, index) => (
-              <article className="product-card" key={product.id}>
-                <div className={`product-card__visual product-card__visual--${product.id}`}>
-                  {index === 0 && <span className="product-tag">BESTSELLER</span>}
-                  <div className="product-card__heart" aria-hidden="true">
-                    ♡
+        {selectedCourse && (
+          <div className="selected-course" role="status">
+            <span>
+              <strong>Selected program</strong>
+              <span>{selectedCourse}</span>
+            </span>
+            <button type="button" onClick={() => toggleCourse(selectedCourse)}>
+              Clear selection
+            </button>
+          </div>
+        )}
+
+        {filteredCourses.length ? (
+          <div className="course-grid">
+            {filteredCourses.map((course, index) => {
+              const selected = selectedCourse === course
+              return (
+                <article className={`course-card${selected ? ' course-card--selected' : ''}`} key={course}>
+                  <div className="course-card__top">
+                    <span className="course-card__number">{String(index + 1).padStart(2, '0')}</span>
+                    <span className="course-card__category">{courseCategory(course)}</span>
                   </div>
-                  <ProductArtwork color={product.color} tone={product.artwork} />
-                </div>
-                <div className="product-card__details">
-                  <div className="product-card__category">
-                    {product.category} <span>·</span> {product.colorName}
-                  </div>
-                  <h3>{product.name}</h3>
-                  <div className="product-card__sizes">Sizes {product.sizes}</div>
-                  <div className="product-card__footer">
-                    <div className="product-price">
-                      <strong>
-                        {product.price.toLocaleString()} <small>ETB</small>
-                      </strong>
-                      <span>{product.stock} in stock</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="add-to-bag"
-                      onClick={() => addToCart(product)}
-                      aria-label={`Add ${product.name} to bag`}
-                    >
-                      <Icon name="plus" size={19} />
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
+                  <h3>{course}</h3>
+                  <button
+                    type="button"
+                    className="course-card__button"
+                    aria-pressed={selected}
+                    onClick={() => toggleCourse(course)}
+                  >
+                    {selected ? 'Selected' : 'Select program'}
+                    <span aria-hidden="true">{selected ? '✓' : '→'}</span>
+                  </button>
+                </article>
+              )
+            })}
           </div>
         ) : (
           <div className="empty-state">
-            <strong>No matching items</strong>
+            <strong>No matching programs</strong>
             <span>Try another search or choose a different category.</span>
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => {
+                setSearch('')
+                setCategory('All programs')
+              }}
+            >
+              Show all programs
+            </button>
           </div>
         )}
       </div>
-
-      {cart.length > 0 && (
-        <aside className="cart-summary" aria-label="Shopping bag">
-          <div className="cart-summary__icon">
-            <Icon name="bag" size={20} />
-            <span>{cart.length}</span>
-          </div>
-          <div className="cart-summary__copy">
-            <strong>Your bag is ready</strong>
-            <span>
-              {cart.length} {cart.length === 1 ? 'item' : 'items'} · {total.toLocaleString()} ETB
-            </span>
-          </div>
-          <Button
-            onClick={() => {
-              onCreateOrder(
-                cart.map((c) => c.name),
-                total
-              )
-              setCart([])
-            }}
-          >
-            Place order <Icon name="arrow" size={16} />
-          </Button>
-        </aside>
-      )}
     </div>
   )
 }
-

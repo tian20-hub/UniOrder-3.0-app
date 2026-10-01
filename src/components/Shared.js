@@ -159,7 +159,7 @@ export function AppLayout({
   const [mobileOpen, setMobileOpen] = useState(false)
   const groups = {
     Student: [
-      { path: '/catalog', label: 'Uniform catalog', icon: 'bag' },
+      { path: '/catalog', label: 'Program catalog', icon: 'grid' },
       { path: '/orders', label: 'My orders', icon: 'receipt' },
     ],
     Staff: [
@@ -320,4 +320,3 @@ export function ProductArtwork({ color, tone = 'shirt' }) {
     </svg>
   )
 }
-

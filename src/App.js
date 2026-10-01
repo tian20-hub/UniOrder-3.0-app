@@ -10,7 +10,7 @@ import Reports from './components/Reports'
 import { AppLayout } from './components/Shared'
 
 const pageDetails = {
-  '/catalog': { title: 'Uniform catalog', subtitle: 'Find the right fit for every school day.' },
+  '/catalog': { title: 'Program catalog', subtitle: 'Explore available degree programs.' },
   '/orders': { title: 'Order history', subtitle: 'Track your uniform orders from request to pickup.' },
   '/inventory': { title: 'Inventory', subtitle: 'Keep stock accurate and ready for the next order.' },
   '/finance': { title: 'Payments', subtitle: 'Review payments and release completed orders.' },
