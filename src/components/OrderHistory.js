@@ -182,6 +182,17 @@ export default function OrderHistory({ orders, onNotify }) {
               <div><dt>Total</dt><dd>{formatPhp(selectedOrder.total)}</dd></div>
               <div><dt>Status</dt><dd><Badge tone={statusTone(selectedOrder.status)}>{selectedOrder.status}</Badge></dd></div>
             </dl>
+            {selectedOrder.orderDetails?.length > 0 && (
+              <div className="order-dialog__items">
+                <strong>Items and sizes</strong>
+                {selectedOrder.orderDetails.map((item, index) => (
+                  <div key={`${item.name}-${item.size}-${index}`}>
+                    <span>{item.name} · {item.course} · Size {item.size} × {item.quantity}</span>
+                    <strong>{formatPhp(item.unitPrice * item.quantity)}</strong>
+                  </div>
+                ))}
+              </div>
+            )}
             <button
               type="button"
               className="button button--primary"

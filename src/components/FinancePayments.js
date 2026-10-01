@@ -52,6 +52,7 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
         order.submittedBy || 'Student',
         formatSubmittedAt(order),
         order.status,
+        order.paymentMethod || '',
         formatPhp(order.total),
       ].some((value) => String(value).toLowerCase().includes(normalizedSearch))
     })
@@ -205,6 +206,9 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
                   <td>
                     <strong className="order-id">{order.id}</strong>
                     <span className="finance-order-items">{order.items}</span>
+                    <span className="finance-order-items">
+                      {order.paymentMethod || 'Payment method not specified'}
+                    </span>
                   </td>
                   <td>
                     <time dateTime={order.submittedAt || undefined} title={order.date}>

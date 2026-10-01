@@ -189,17 +189,12 @@ export function AppLayout({
       { path: '/catalog', label: 'Uniform catalog', icon: 'bag' },
       { path: '/orders', label: 'My orders', icon: 'receipt' },
     ],
-    Staff: [
-      { path: '/inventory', label: 'Inventory', icon: 'package' },
-      { path: '/orders', label: 'Orders', icon: 'receipt' },
-    ],
     Finance: [
       { path: '/finance', label: 'Payments', icon: 'receipt' },
       { path: '/orders', label: 'Order overview', icon: 'bag' },
     ],
     Administrator: [
-      { path: '/admin', label: 'System control', icon: 'shield' },
-      { path: '/inventory', label: 'Inventory', icon: 'package' },
+      { path: '/admin', label: 'Mother Admin', icon: 'shield' },
       { path: '/finance', label: 'Payments', icon: 'receipt' },
       { path: '/reports', label: 'Reports', icon: 'chart' },
     ],
@@ -247,15 +242,27 @@ export function AppLayout({
             <span className="sr-only">Switch demo role</span>
             <select value={role} onChange={(event) => onRoleChange(event.target.value)}>
               {Object.keys(groups).map((name) => (
-                <option key={name}>{name}</option>
+                <option key={name} value={name}>
+                  {name === 'Administrator' ? 'Mother Admin' : name}
+                </option>
               ))}
             </select>
             <Icon name="chevron" size={15} />
           </label>
           <div className="sidebar__profile">
-            <div className="avatar">{role === 'Student' ? profileInitials : role.slice(0, 2).toUpperCase()}</div>
+            <div className="avatar">
+              {role === 'Student'
+                ? profileInitials
+                : role === 'Administrator'
+                  ? 'MA'
+                  : role.slice(0, 2).toUpperCase()}
+            </div>
             <div className="sidebar__profile-text">
-              <strong>{role === 'Student' ? profile.name : `${role} account`}</strong>
+              <strong>
+                {role === 'Student'
+                  ? profile.name
+                  : `${role === 'Administrator' ? 'Mother Admin' : role} account`}
+              </strong>
               <span>{role === 'Student' ? profile.schoolId : 'Demo workspace'}</span>
             </div>
             <button

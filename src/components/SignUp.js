@@ -81,9 +81,8 @@ export default function SignUp({ onNavigate, onSignUp }) {
               <span>Workspace role</span>
               <select value={role} onChange={(event) => setRole(event.target.value)}>
                 <option>Student</option>
-                <option>Staff</option>
                 <option>Finance</option>
-                <option>Administrator</option>
+                <option value="Administrator">Mother Admin</option>
               </select>
             </label>
             <label>
@@ -117,4 +116,3 @@ export default function SignUp({ onNavigate, onSignUp }) {
     </main>
   )
 }
-

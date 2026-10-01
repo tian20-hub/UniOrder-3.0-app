@@ -3,11 +3,11 @@ import Login from './components/Login'
 import ResetPassword from './components/ResetPassword'
 import StudentCatalog from './components/StudentCatalog'
 import OrderHistory from './components/OrderHistory'
-import Inventory from './components/Inventory'
 import FinancePayments from './components/FinancePayments'
 import MotherAdmin from './components/MotherAdmin'
 import Reports from './components/Reports'
 import { AppLayout } from './components/Shared'
+import { readAdminSettings } from './data/adminSettings'
 import { courses } from './data/courses'
 import { readInventory } from './data/inventory'
 import { convertEtbToPhp } from './utils/currency'
@@ -15,9 +15,8 @@ import { convertEtbToPhp } from './utils/currency'
 const pageDetails = {
   '/catalog': { title: 'Student Uniform Catalog', subtitle: 'Search by course and order available uniforms.' },
   '/orders': { title: 'Order history', subtitle: 'Track your uniform orders from request to pickup.' },
-  '/inventory': { title: 'Inventory', subtitle: 'Keep stock accurate and ready for the next order.' },
   '/finance': { title: 'Payments', subtitle: 'Review payments and release completed orders.' },
-  '/admin': { title: 'System control', subtitle: 'Manage access and keep your campus running smoothly.' },
+  '/admin': { title: 'Mother Admin', subtitle: 'Manage accounts, stock, checkout rules, and campus policies.' },
   '/reports': { title: 'Reports', subtitle: 'A clear view of orders, inventory, and revenue.' },
 }
 
@@ -64,7 +63,6 @@ function readProfile() {
 }
 
 function roleHome(role) {
-  if (role === 'Staff') return '/inventory'
   if (role === 'Finance') return '/finance'
   if (role === 'Administrator') return '/admin'
   return '/catalog'
@@ -79,6 +77,7 @@ export default function App() {
   const [profile, setProfile] = useState(readProfile)
   const [darkMode, setDarkMode] = useState(readDarkMode)
   const [inventory, setInventory] = useState(readInventory)
+  const [adminSettings, setAdminSettings] = useState(readAdminSettings)
   const [orders, setOrders] = useState([
     { id: 'ORD-24018', items: '2 items', date: 'Oct 01, 2026', submittedAt: '2026-10-01T09:42:00+08:00', submittedBy: 'Amina Mekonnen', total: convertEtbToPhp(1250), status: 'Ready for pickup' },
     { id: 'ORD-23972', items: '1 item', date: 'Sep 24, 2026', submittedAt: '2026-09-24T14:18:00+08:00', submittedBy: 'Daniel Kebede', total: convertEtbToPhp(680), status: 'Processing' },
@@ -102,7 +101,8 @@ export default function App() {
     const isAuth = ['/login', '/signup', '/reset-password'].includes(path)
     if (!isAuth && !signedIn) navigate('/login', true)
     if (signedIn && isAuth) navigate('/catalog', true)
-  }, [path, signedIn])
+    if (signedIn && !isAuth && !Object.hasOwn(pageDetails, path)) navigate(roleHome(role), true)
+  }, [path, signedIn, role])
 
   useEffect(() => {
     if (!toast) return undefined
@@ -129,6 +129,15 @@ export default function App() {
     }
   }, [inventory])
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('uniorder-admin-settings', JSON.stringify(adminSettings))
+    } catch (error) {
+      console.error('Unable to save administrator settings.', error)
+      setToast('Could not save administrator settings. Please check your browser storage.')
+    }
+  }, [adminSettings])
+
   const handleSignIn = (selectedRole) => {
     setRole(selectedRole)
     setSignedIn(true)
@@ -148,19 +157,45 @@ export default function App() {
     }
   }
 
-  const createOrder = (itemNames, total) => {
+  const createOrder = (orderLines, total, paymentMethod) => {
+    const itemCount = orderLines.reduce((sum, item) => sum + item.quantity, 0)
+    const deadlinePassed = adminSettings.orderDeadline
+      && new Date(adminSettings.orderDeadline).getTime() < Date.now()
+    if (!adminSettings.orderingEnabled || deadlinePassed) {
+      setToast('Ordering is currently closed.')
+      return false
+    }
+    if (adminSettings.maxItemsPerOrder > 0 && itemCount > adminSettings.maxItemsPerOrder) {
+      const unit = adminSettings.maxItemsPerOrder === 1 ? 'item' : 'items'
+      setToast(`Orders are limited to ${adminSettings.maxItemsPerOrder} ${unit}.`)
+      return false
+    }
+    if (!adminSettings.paymentMethods.includes(paymentMethod)) {
+      setToast('Choose an available payment method before placing your order.')
+      return false
+    }
+
     const newOrder = {
       id: `ORD-${Math.floor(24019 + Math.random() * 700)}`,
-      items: `${itemNames.length} ${itemNames.length === 1 ? 'item' : 'items'}`,
+      items: `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`,
+      orderDetails: orderLines.map((item) => ({
+        name: item.name,
+        course: item.course,
+        size: item.size,
+        quantity: item.quantity,
+        unitPrice: item.price,
+      })),
       date: new Intl.DateTimeFormat('en', { month: 'short', day: '2-digit', year: 'numeric' }).format(new Date()),
       submittedAt: new Date().toISOString(),
       submittedBy: profile.name,
       total,
+      paymentMethod,
       status: 'Awaiting payment',
     }
     setOrders((current) => [newOrder, ...current])
     setToast('Your order has been placed.')
     navigate('/orders')
+    return true
   }
 
   if (path === '/login' || path === '/signup') {
@@ -176,21 +211,23 @@ export default function App() {
   if (path === '/reset-password') return <ResetPassword onNavigate={navigate} />
 
   const detail = pageDetails[path] || pageDetails['/catalog']
-  const pageProps = { onNotify: setToast, inventory, onUpdateInventory: setInventory }
+  const pageProps = {
+    onNotify: setToast,
+    inventory,
+    onUpdateInventory: setInventory,
+    adminSettings,
+  }
   let page
 
   switch (path) {
     case '/orders':
       page = <OrderHistory orders={orders} onNotify={setToast} />
       break
-    case '/inventory':
-      page = <Inventory {...pageProps} />
-      break
     case '/finance':
       page = <FinancePayments orders={orders} onUpdateOrders={setOrders} {...pageProps} />
       break
     case '/admin':
-      page = <MotherAdmin onNavigate={navigate} {...pageProps} />
+      page = <MotherAdmin onSaveSettings={setAdminSettings} {...pageProps} />
       break
     case '/reports':
       page = <Reports orders={orders} />

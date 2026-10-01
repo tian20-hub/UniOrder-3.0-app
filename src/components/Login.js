@@ -128,9 +128,8 @@ export default function Login({ onSignIn, onNavigate, toast, initialMode = 'logi
               <span>Workspace role</span>
               <select value={role} onChange={(event) => setRole(event.target.value)}>
                 <option>Student</option>
-                <option>Staff</option>
                 <option>Finance</option>
-                <option>Administrator</option>
+                <option value="Administrator">Mother Admin</option>
               </select>
             </label>
 
@@ -186,9 +185,8 @@ export default function Login({ onSignIn, onNavigate, toast, initialMode = 'logi
               <span>Workspace role</span>
               <select value={role} onChange={(event) => setRole(event.target.value)}>
                 <option>Student</option>
-                <option>Staff</option>
                 <option>Finance</option>
-                <option>Administrator</option>
+                <option value="Administrator">Mother Admin</option>
               </select>
             </label>
 
@@ -207,14 +205,14 @@ export default function Login({ onSignIn, onNavigate, toast, initialMode = 'logi
           <div className="login-demo">
             <span className="login-demo__label">OR TRY A DEMO PROFILE</span>
             <div className="login-demo__roles">
-              {['Student', 'Staff', 'Finance', 'Administrator'].map((demoRole) => (
+              {['Student', 'Finance', 'Administrator'].map((demoRole) => (
                 <button
                   key={demoRole}
                   type="button"
                   className="login-demo__role"
                   onClick={() => onSignIn(demoRole)}
                 >
-                  {demoRole}
+                  {demoRole === 'Administrator' ? 'Mother Admin' : demoRole}
                 </button>
               ))}
             </div>
