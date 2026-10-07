@@ -1,7 +1,7 @@
   import React, { useEffect, useState } from 'react'
 import { Badge, Button, Icon, PageIntro, StatCard } from './Shared'
 import Inventory from './Inventory'
-import { defaultAdminSettings, paymentOptions } from '../data/adminSettings'
+import { defaultAdminSettings } from '../data/adminSettings'
 import { formatEtbAsPhp } from '../utils/currency'
 
 const defaultUsers = [
@@ -15,7 +15,6 @@ const sections = [
   { id: 'accounts', label: 'Accounts' },
   { id: 'stocks', label: 'Stocks update' },
   { id: 'orders', label: 'Order & Deadline Constraints' },
-  { id: 'payments', label: 'Payment & Checkout Configuration' },
   { id: 'notifications', label: 'Notifications & Terms' },
 ]
 
@@ -146,13 +145,6 @@ export default function MotherAdmin({
 
   const updateSettings = (updates) => {
     setSettingsDraft((current) => ({ ...current, ...updates }))
-  }
-
-  const togglePaymentMethod = (method) => {
-    const methods = settingsDraft.paymentMethods.includes(method)
-      ? settingsDraft.paymentMethods.filter((item) => item !== method)
-      : [...settingsDraft.paymentMethods, method]
-    updateSettings({ paymentMethods: methods })
   }
 
   return (
@@ -343,38 +335,6 @@ export default function MotherAdmin({
               <small>Leave blank for no item-count limit.</small>
             </label>
             <Button type="submit"><Icon name="check" size={16} /> Save order constraints</Button>
-          </form>
-        </section>
-      )}
-
-      {section === 'payments' && (
-        <section className="surface mother-admin-settings">
-          <PageIntro eyebrow="CHECKOUT" title="Payment & Checkout Configuration" subtitle="Choose accepted payment methods and explain how students should pay." />
-          <form className="mother-admin-settings__form" onSubmit={saveSettings}>
-            <fieldset className="mother-admin-payment-options">
-              <legend>Accepted payment methods</legend>
-              {paymentOptions.map((method) => (
-                <label key={method}>
-                  <input
-                    type="checkbox"
-                    checked={settingsDraft.paymentMethods.includes(method)}
-                    onChange={() => togglePaymentMethod(method)}
-                  />
-                  <span>{method}</span>
-                </label>
-              ))}
-              {!settingsDraft.paymentMethods.length && <small className="mother-admin-warning">No payment method is active; students cannot place an order.</small>}
-            </fieldset>
-            <label>
-              Payment instructions
-              <textarea
-                rows="4"
-                maxLength={500}
-                value={settingsDraft.paymentInstructions}
-                onChange={(event) => updateSettings({ paymentInstructions: event.target.value })}
-              />
-            </label>
-            <Button type="submit"><Icon name="check" size={16} /> Save checkout settings</Button>
           </form>
         </section>
       )}

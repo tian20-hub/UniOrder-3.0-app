@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import ProfileSettings from './ProfileSettings'
 
 const iconPaths = {
@@ -164,7 +164,6 @@ export function AppLayout({
   subtitle,
   role,
   profile,
-  orders,
   onSaveProfile,
   onRoleChange,
   onNavigate,
@@ -178,6 +177,14 @@ export function AppLayout({
   const [mobileOpen, setMobileOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const closeSettings = () => setSettingsOpen(false)
+  useEffect(() => {
+    if (!mobileOpen) return undefined
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setMobileOpen(false)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [mobileOpen])
   const profileInitials = profile.name
     .trim()
     .split(/\s+/)
@@ -203,7 +210,11 @@ export function AppLayout({
 
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${mobileOpen ? 'sidebar--open' : ''}`}>
+      <aside
+        id="workspace-sidebar"
+        className={`sidebar ${mobileOpen ? 'sidebar--open' : ''}`}
+        aria-label="Workspace navigation"
+      >
         <a
           href="/catalog"
           className="brand"
@@ -240,7 +251,13 @@ export function AppLayout({
           <div className="sidebar__role-label">DEMO ROLE</div>
           <label className="role-select-wrap">
             <span className="sr-only">Switch demo role</span>
-            <select value={role} onChange={(event) => onRoleChange(event.target.value)}>
+            <select
+              value={role}
+              onChange={(event) => {
+                onRoleChange(event.target.value)
+                setMobileOpen(false)
+              }}
+            >
               {Object.keys(groups).map((name) => (
                 <option key={name} value={name}>
                   {name === 'Administrator' ? 'Mother Admin' : name}
@@ -283,9 +300,11 @@ export function AppLayout({
             type="button"
             className="icon-button mobile-menu"
             onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Open menu"
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-controls="workspace-sidebar"
+            aria-expanded={mobileOpen}
           >
-            <Icon name="menu" />
+            <Icon name={mobileOpen ? 'close' : 'menu'} />
           </button>
           <div className="topbar__breadcrumb">
             Workspace <span>/</span> <strong>{title}</strong>
@@ -331,7 +350,6 @@ export function AppLayout({
       {settingsOpen && (
         <ProfileSettings
           profile={profile}
-          orders={orders}
           darkMode={darkMode}
           onToggleDarkMode={onToggleDarkMode}
           onSave={onSaveProfile}

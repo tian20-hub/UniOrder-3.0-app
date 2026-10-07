@@ -580,7 +580,8 @@
   background: #f8fafc;
 }
 .sidebar {
-  width: 260px;
+  width: clamp(220px, 22vw, 260px);
+  min-height: 100vh;
   background: #0f172a;
   color: #f8fafc;
   display: flex;
@@ -588,6 +589,9 @@
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1.5rem 1.25rem;
   border-right: 1px solid #1e293b;
   flex-shrink: 0;
@@ -1448,33 +1452,6 @@
   margin: 0;
   color: #0f172a;
 }
-.account-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.2rem;
-  margin-bottom: 1rem;
-  padding: 0.22rem;
-  border: 1px solid #dbe3ed;
-  border-radius: 0.7rem;
-  background: #f1f5f9;
-}
-.account-tab {
-  min-height: 2.5rem;
-  border: 1px solid transparent;
-  border-radius: 0.55rem;
-  background: transparent;
-  color: #475569;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-.account-tab--active {
-  border-color: #dbe3ed;
-  background: #ffffff;
-  color: #075985;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
-}
 .account-identity {
   display: flex;
   align-items: center;
@@ -1603,77 +1580,6 @@
   accent-color: #2563eb;
   cursor: pointer;
 }
-.account-orders-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0.8rem 0;
-  color: #334155;
-}
-.account-orders-heading span {
-  color: #64748b;
-  font-size: 0.75rem;
-}
-.account-orders-list {
-  display: grid;
-  gap: 0.6rem;
-  max-height: min(55vh, 430px);
-  overflow-y: auto;
-}
-.account-order {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.8rem;
-  border: 1px solid #dbe3ed;
-  border-radius: 0.65rem;
-  background: #ffffff;
-}
-.account-order__main,
-.account-order__meta {
-  display: grid;
-  gap: 0.25rem;
-}
-.account-order__main strong,
-.account-order__meta strong {
-  color: #1e293b;
-  font-size: 0.8rem;
-}
-.account-order__main span {
-  color: #64748b;
-  font-size: 0.7rem;
-}
-.account-order__meta {
-  justify-items: end;
-}
-.account-order-status {
-  padding: 0.2rem 0.45rem;
-  border-radius: 9999px;
-  font-size: 0.64rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.account-order-status--success {
-  background: #dcfce7;
-  color: #166534;
-}
-.account-order-status--processing {
-  background: #dbeafe;
-  color: #1e40af;
-}
-.account-order-status--pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-.account-orders-empty {
-  padding: 2rem 1rem;
-  border: 1px dashed #cbd5e1;
-  border-radius: 0.65rem;
-  color: #64748b;
-  text-align: center;
-}
-
 html[data-theme='light'] .surface,
 html[data-theme='light'] .stat-card,
 html[data-theme='light'] .product-card,
@@ -1686,15 +1592,12 @@ html[data-theme='light'] .reports-summary > div {
 html[data-theme='light'] .profile-settings,
 html[data-theme='light'] .profile-settings__fields--account input,
 html[data-theme='light'] .profile-settings__fields--account select,
-html[data-theme='light'] .account-tab--active,
-html[data-theme='light'] .account-preference,
-html[data-theme='light'] .account-order {
+html[data-theme='light'] .account-preference {
   border-color: #cbd5e1;
 }
 
 html[data-theme='dark'] .profile-settings--account,
-html[data-theme='dark'] .account-tab--active,
-html[data-theme='dark'] .account-order {
+html[data-theme='dark'] .account-preference {
   color: #e5e7eb;
   border-color: #3b4b63;
   background: #172033;
@@ -1706,10 +1609,7 @@ html[data-theme='dark'] .account-preferences {
 html[data-theme='dark'] .profile-settings__header--account h2,
 html[data-theme='dark'] .account-identity strong,
 html[data-theme='dark'] .account-preferences h3,
-html[data-theme='dark'] .account-preference strong,
-html[data-theme='dark'] .account-orders-heading,
-html[data-theme='dark'] .account-order__main strong,
-html[data-theme='dark'] .account-order__meta strong {
+html[data-theme='dark'] .account-preference strong {
   color: #f1f5f9;
 }
 html[data-theme='dark'] .table-tabs {
@@ -1733,24 +1633,14 @@ html[data-theme='dark'] .table-tab span {
   background: #7f1d1d;
 }
 html[data-theme='dark'] .account-identity small,
-html[data-theme='dark'] .account-preference small,
-html[data-theme='dark'] .account-orders-heading span,
-html[data-theme='dark'] .account-order__main span,
-html[data-theme='dark'] .account-orders-empty {
+html[data-theme='dark'] .account-preference small {
   color: #bdc9d9;
 }
-html[data-theme='dark'] .account-tabs,
 html[data-theme='dark'] .account-preference,
 html[data-theme='dark'] .profile-settings__fields--account label:nth-child(2) input,
 html[data-theme='dark'] .profile-settings__fields--account label:nth-child(4) select {
   border-color: #394960;
   background: #111a2b;
-}
-html[data-theme='dark'] .account-tab {
-  color: #cbd5e1;
-}
-html[data-theme='dark'] .account-tab--active {
-  color: #7dd3fc;
 }
 html[data-theme='dark'] .profile-settings__fields--account label {
   color: #dbe4f0;
@@ -1765,19 +1655,9 @@ html[data-theme='dark'] .profile-settings__fields--account select option {
   color: #f1f5f9;
   background: #111a2b;
 }
-html[data-theme='dark'] .account-orders-empty {
-  border-color: #475569;
-}
-
 @media (max-width: 520px) {
   .profile-settings--account {
     padding: 1rem;
-  }
-  .account-order {
-    align-items: flex-start;
-  }
-  .account-order__meta strong {
-    text-align: right;
   }
 }
 .uniform-set-card__contents strong {
@@ -3116,7 +2996,20 @@ html[data-theme='dark'] .order-support-dialog textarea::placeholder {
   display: none;
 }
 
-@media (max-width: 900px) {
+@media (min-width: 1025px) and (max-width: 1100px) {
+  .sidebar {
+    padding-right: 0.9rem;
+    padding-left: 0.9rem;
+  }
+  .nav-item {
+    gap: 0.55rem;
+    padding-right: 0.65rem;
+    padding-left: 0.65rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 1024px) {
   .auth-page {
     flex-direction: column;
   }
@@ -3131,11 +3024,22 @@ html[data-theme='dark'] .order-support-dialog textarea::placeholder {
   }
   .sidebar {
     position: fixed;
-    left: -280px;
-    transition: left 0.25s ease;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(280px, calc(100vw - 2rem));
+    min-height: 0;
+    height: auto;
+    height: 100vh;
+    height: 100dvh;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.25s ease, visibility 0s linear 0.25s;
   }
   .sidebar--open {
-    left: 0;
+    transform: translateX(0);
+    visibility: visible;
+    transition-delay: 0s;
   }
   .sidebar-scrim {
     display: block;
@@ -3156,6 +3060,33 @@ html[data-theme='dark'] .order-support-dialog textarea::placeholder {
   }
   .page-content {
     padding: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar {
+    gap: 0.5rem;
+    padding: 0 0.75rem;
+  }
+  .topbar__breadcrumb {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar__actions {
+    gap: 0.5rem;
+  }
+  .profile-settings-trigger {
+    gap: 0.25rem;
+    padding: 0.3rem;
+  }
+  .profile-settings-trigger__label {
+    display: none;
+  }
+  .page-content {
+    padding: 0.875rem;
   }
 }
 
@@ -4787,7 +4718,6 @@ html[data-theme='dark'] .reports-lines__label {
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.42), 0 0 22px rgba(239, 68, 68, 0.2);
 }
 .account-action:focus-visible,
-.account-tab:focus-visible,
 .account-preference input:focus-visible {
   outline: 2px solid #38bdf8;
   outline-offset: 3px;
@@ -4815,16 +4745,16 @@ html[data-theme='dark'] .page-content select option {
   color: #f8fafc;
   background-color: #111a2b;
 }
-html[data-theme='dark'] .page-content :is(.badge--green, .badge--blue, .badge--amber, .badge--purple, .badge--neutral, .account-order-status) {
+html[data-theme='dark'] .page-content :is(.badge--green, .badge--blue, .badge--amber, .badge--purple, .badge--neutral) {
   color: #f8fafc;
 }
-html[data-theme='dark'] .page-content :is(.badge--green, .account-order-status--success) {
+html[data-theme='dark'] .page-content .badge--green {
   background: #14532d;
 }
-html[data-theme='dark'] .page-content :is(.badge--blue, .account-order-status--processing) {
+html[data-theme='dark'] .page-content .badge--blue {
   background: #1e3a8a;
 }
-html[data-theme='dark'] .page-content :is(.badge--amber, .account-order-status--pending) {
+html[data-theme='dark'] .page-content .badge--amber {
   background: #78350f;
 }
 html[data-theme='dark'] .page-content :is(.badge--purple, .badge--neutral) {

@@ -246,7 +246,6 @@ export default function App() {
       role={role}
       profile={profile}
       onSaveProfile={saveProfile}
-      orders={orders}
       darkMode={darkMode}
       onToggleDarkMode={() => setDarkMode((current) => !current)}
       onChangePassword={() => {
