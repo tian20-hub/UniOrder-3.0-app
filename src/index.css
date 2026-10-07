@@ -3833,6 +3833,147 @@ html[data-theme='dark'] .page-content {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+.sidebar .sidebar__header .brand {
+  min-width: 0;
+  margin-bottom: 0;
+}
+.sidebar__wordmark {
+  white-space: nowrap;
+}
+.sidebar__collapse,
+.sidebar__close {
+  flex: 0 0 auto;
+  border-color: #334155;
+  background: transparent;
+  color: #94a3b8;
+}
+.sidebar__collapse:hover,
+.sidebar__close:hover {
+  border-color: #475569;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+.sidebar__close {
+  display: none;
+}
+[data-theme='light'] .sidebar {
+  background: #ffffff;
+  color: #1e293b;
+  border-right-color: #e2e8f0;
+}
+[data-theme='light'] .sidebar .brand {
+  color: #0f172a;
+}
+[data-theme='light'] .nav-item {
+  color: #64748b;
+}
+[data-theme='light'] .nav-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+[data-theme='light'] .sidebar__bottom {
+  border-top-color: #e2e8f0;
+}
+[data-theme='light'] .role-select-wrap select {
+  background: #f8fafc;
+  color: #334155;
+  border-color: #e2e8f0;
+}
+[data-theme='light'] .role-select-wrap svg {
+  color: #64748b;
+}
+[data-theme='light'] .sidebar__profile {
+  background: #f8fafc;
+}
+[data-theme='light'] .sidebar__collapse,
+[data-theme='light'] .sidebar__close {
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+[data-theme='light'] .sidebar__collapse:hover,
+[data-theme='light'] .sidebar__close:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+.sidebar__wordmark,
+.nav-item__label,
+.nav-item__count,
+.sidebar__bottom,
+.sidebar__profile {
+  transition: width 220ms ease, padding 220ms ease, opacity 160ms ease, gap 220ms ease;
+}
+
+@media (min-width: 1025px) {
+  .sidebar {
+    transition: width 220ms ease, padding 220ms ease;
+  }
+  .sidebar--collapsed {
+    width: 5.25rem;
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+  .sidebar--collapsed .sidebar__header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .sidebar--collapsed .sidebar__wordmark,
+  .sidebar--collapsed .sidebar__section-label,
+  .sidebar--collapsed .nav-item__label,
+  .sidebar--collapsed .nav-item__count,
+  .sidebar--collapsed .sidebar__role-label,
+  .sidebar--collapsed .role-select-wrap,
+  .sidebar--collapsed .sidebar__profile-text,
+  .sidebar--collapsed .sidebar__logout {
+    display: none;
+  }
+  .sidebar--collapsed .sidebar__nav {
+    align-items: center;
+  }
+  .sidebar--collapsed .nav-item {
+    justify-content: center;
+    width: 2.75rem;
+    padding-right: 0;
+    padding-left: 0;
+  }
+  .sidebar--collapsed .sidebar__bottom {
+    align-items: center;
+  }
+  .sidebar--collapsed .sidebar__profile {
+    justify-content: center;
+    width: 100%;
+    padding-right: 0;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 1024px) {
+  .sidebar__collapse {
+    display: none;
+  }
+  .sidebar__close {
+    display: inline-flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar__wordmark,
+  .nav-item__label,
+  .nav-item__count,
+  .sidebar__bottom,
+  .sidebar__profile {
+    transition-duration: 0.01ms;
+  }
+}
 .login-card--recovery {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

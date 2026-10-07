@@ -175,6 +175,7 @@ export function AppLayout({
   children,
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const closeSettings = () => setSettingsOpen(false)
   useEffect(() => {
@@ -212,23 +213,44 @@ export function AppLayout({
     <div className="app-shell">
       <aside
         id="workspace-sidebar"
-        className={`sidebar ${mobileOpen ? 'sidebar--open' : ''}`}
+        className={`sidebar ${mobileOpen ? 'sidebar--open' : ''} ${sidebarCollapsed ? 'sidebar--collapsed' : ''}`}
         aria-label="Workspace navigation"
       >
-        <a
-          href="/catalog"
-          className="brand"
-          onClick={(event) => {
-            event.preventDefault()
-            onNavigate('/catalog')
-            setMobileOpen(false)
-          }}
-        >
-          <span className="brand__mark">u</span>
-          <span>
-            uniorder<span className="brand__dot">.</span>
-          </span>
-        </a>
+        <div className="sidebar__header">
+          <a
+            href="/catalog"
+            className="brand"
+            aria-label="Uniorder home"
+            onClick={(event) => {
+              event.preventDefault()
+              onNavigate('/catalog')
+              setMobileOpen(false)
+            }}
+          >
+            <span className="brand__mark">u</span>
+            <span className="sidebar__wordmark">
+              uniorder<span className="brand__dot">.</span>
+            </span>
+          </a>
+          <button
+            type="button"
+            className="icon-button sidebar__collapse"
+            onClick={() => setSidebarCollapsed((current) => !current)}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-controls="workspace-sidebar"
+            aria-expanded={!sidebarCollapsed}
+          >
+            <Icon name="menu" />
+          </button>
+          <button
+            type="button"
+            className="icon-button sidebar__close"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close menu"
+          >
+            <Icon name="close" />
+          </button>
+        </div>
         <div className="sidebar__section-label">WORKSPACE</div>
         <nav className="sidebar__nav" aria-label="Main navigation">
           {items.map((item) => (
@@ -236,13 +258,15 @@ export function AppLayout({
               key={item.path}
               type="button"
               className={`nav-item ${activePath === item.path ? 'nav-item--active' : ''}`}
+              aria-label={item.label}
+              title={sidebarCollapsed ? item.label : undefined}
               onClick={() => {
                 onNavigate(item.path)
                 setMobileOpen(false)
               }}
             >
               <Icon name={item.icon} />
-              <span>{item.label}</span>
+              <span className="nav-item__label">{item.label}</span>
               {item.path === '/orders' && <span className="nav-item__count">3</span>}
             </button>
           ))}
