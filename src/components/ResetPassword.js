@@ -1,53 +1,92 @@
 import { useState } from 'react'
 import { Button } from './Shared'
 
+function createResetCode() {
+  const value = window.crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000
+  return String(value).padStart(6, '0')
+}
+
 export default function ResetPassword({ onNavigate }) {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
-  const [sent, setSent] = useState(false)
-  const [verified, setVerified] = useState(false)
+  const [resetCode, setResetCode] = useState('')
+  const [step, setStep] = useState('email')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState('error')
+
+  const showMessage = (text, type = 'error') => {
+    setMessage(text)
+    setMessageType(type)
+  }
 
   const sendCode = (event) => {
     event.preventDefault()
-    if (!email.trim()) {
-      setMessage('Enter your email address to receive a reset code.')
+    const normalizedEmail = email.trim()
+    if (!normalizedEmail) {
+      showMessage('Enter your email address to receive a reset code.')
       return
     }
-    setMessage('')
-    setSent(true)
+
+    setEmail(normalizedEmail)
+    setCode('')
+    setResetCode(createResetCode())
+    setStep('code')
+    showMessage('A demo reset code is ready below.', 'success')
   }
 
   const verifyCode = (event) => {
     event.preventDefault()
-    if (code.trim().length < 4) {
-      setMessage('Enter the 6-digit code to continue.')
+    if (!/^\d{6}$/.test(code)) {
+      showMessage('Enter the 6-digit code to continue.')
       return
     }
-    setMessage('')
-    setVerified(true)
+    if (code !== resetCode) {
+      showMessage('That code is not correct. Check the code below and try again.')
+      return
+    }
+
+    setStep('password')
+    showMessage('')
   }
 
   const savePassword = (event) => {
     event.preventDefault()
     if (password.length < 6) {
-      setMessage('Choose a password with at least 6 characters.')
+      showMessage('Choose a password with at least 6 characters.')
       return
     }
-    onNavigate('/login')
+    if (password !== confirmPassword) {
+      showMessage('Your passwords do not match.')
+      return
+    }
+
+    setStep('done')
+    showMessage('Your password has been reset in this demo.', 'success')
   }
 
-  const title = verified
-    ? 'Choose a new password'
-    : sent
+  const resendCode = () => {
+    setResetCode(createResetCode())
+    setCode('')
+    showMessage('A new demo reset code is ready below.', 'success')
+  }
+
+  const stepNumber = step === 'email' ? 1 : step === 'code' ? 2 : 3
+  const title = step === 'email'
+    ? 'Forgot your password?'
+    : step === 'code'
       ? 'Check your inbox'
-      : 'Forgot your password?'
-  const description = verified
-    ? 'Choose a secure password for your account.'
-    : sent
-      ? `We sent a one-time code to ${email}. Enter it below to continue.`
-      : 'Enter your school email and we’ll send you a one-time reset code.'
+      : step === 'password'
+        ? 'Choose a new password'
+        : 'Password reset complete'
+  const description = step === 'email'
+    ? 'Enter your school email to start resetting your password.'
+    : step === 'code'
+      ? `Enter the 6-digit code for ${email}.`
+      : step === 'password'
+        ? 'Choose a new password for your account.'
+        : `Your password reset for ${email} is complete.`
 
   return (
     <main className="login-page">
@@ -59,11 +98,11 @@ export default function ResetPassword({ onNavigate }) {
             <h2>LET&apos;S GET<br />YOU BACK.</h2>
             <p>Reset your password and get back to your school day.</p>
             <div className="recovery-steps">
-              <span className={!sent ? 'is-current' : 'is-done'}>1</span>
-              <i className={sent ? 'is-done' : ''} />
-              <span className={sent && !verified ? 'is-current' : verified ? 'is-done' : ''}>2</span>
-              <i className={verified ? 'is-done' : ''} />
-              <span className={verified ? 'is-current' : ''}>3</span>
+              <span className={stepNumber > 1 ? 'is-done' : 'is-current'}>1</span>
+              <i className={stepNumber > 1 ? 'is-done' : ''} />
+              <span className={stepNumber > 2 ? 'is-done' : stepNumber === 2 ? 'is-current' : ''}>2</span>
+              <i className={stepNumber > 2 ? 'is-done' : ''} />
+              <span className={stepNumber === 3 ? 'is-current' : ''}>3</span>
             </div>
             <span className="login-card__welcome-footer">EMAIL · VERIFY · RESET</span>
           </div>
@@ -90,7 +129,7 @@ export default function ResetPassword({ onNavigate }) {
             <p>{description}</p>
           </div>
 
-          {!sent && (
+          {step === 'email' && (
             <form className="login-form" onSubmit={sendCode}>
               <label className="login-field">
                 <span>Email address</span>
@@ -109,34 +148,37 @@ export default function ResetPassword({ onNavigate }) {
             </form>
           )}
 
-          {sent && !verified && (
-            <form className="login-form" onSubmit={verifyCode}>
-              <label className="login-field">
-                <span>One-time code</span>
-                <input
-                  inputMode="numeric"
-                  maxLength={6}
-                  autoComplete="one-time-code"
-                  placeholder="Enter your 6-digit code"
-                  value={code}
-                  onChange={(event) => setCode(event.target.value)}
-                  required
-                />
-              </label>
-              <Button type="submit" className="login-submit">
-                Verify code <span aria-hidden="true">→</span>
-              </Button>
-              <button
-                type="button"
-                className="login-link recovery-resend"
-                onClick={() => setMessage('A fresh code has been sent.')}
-              >
-                Resend code
-              </button>
-            </form>
+          {step === 'code' && (
+            <>
+              <div className="recovery-demo-code" aria-label={`Demo reset code: ${resetCode}`}>
+                <span>DEMO RESET CODE</span>
+                <strong>{resetCode}</strong>
+              </div>
+              <form className="login-form" onSubmit={verifyCode}>
+                <label className="login-field">
+                  <span>One-time code</span>
+                  <input
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                    placeholder="Enter your 6-digit code"
+                    value={code}
+                    onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                    required
+                  />
+                </label>
+                <Button type="submit" className="login-submit">
+                  Verify code <span aria-hidden="true">→</span>
+                </Button>
+                <button type="button" className="login-link recovery-resend" onClick={resendCode}>
+                  Resend code
+                </button>
+              </form>
+            </>
           )}
 
-          {verified && (
+          {step === 'password' && (
             <form className="login-form" onSubmit={savePassword}>
               <label className="login-field">
                 <span>New password</span>
@@ -146,25 +188,46 @@ export default function ResetPassword({ onNavigate }) {
                   placeholder="At least 6 characters"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
+                  minLength={6}
+                  required
+                />
+              </label>
+              <label className="login-field">
+                <span>Confirm new password</span>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Enter your new password again"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  minLength={6}
                   required
                 />
               </label>
               <Button type="submit" className="login-submit">
-                Save new password <span aria-hidden="true">→</span>
+                Reset password <span aria-hidden="true">→</span>
               </Button>
             </form>
           )}
 
+          {step === 'done' && (
+            <Button type="button" className="login-submit" onClick={() => onNavigate('/login')}>
+              Back to sign in <span aria-hidden="true">→</span>
+            </Button>
+          )}
+
           {message && (
             <div
-              className={`recovery-message${message.includes('sent') ? ' recovery-message--success' : ''}`}
-              role="status"
+              className={`recovery-message${messageType === 'success' ? ' recovery-message--success' : ''}`}
+              role={messageType === 'error' ? 'alert' : 'status'}
             >
               {message}
             </div>
           )}
 
-          <p className="recovery-note">Demo flow — enter any email and a code to continue.</p>
+          <p className="recovery-note">
+            Demo mode: no email is sent. Use the reset code shown here to continue.
+          </p>
         </section>
       </section>
 
