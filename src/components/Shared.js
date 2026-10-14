@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import ProfileSettings from './ProfileSettings'
 
 const iconPaths = {
@@ -165,18 +165,22 @@ export function AppLayout({
   role,
   profile,
   onSaveProfile,
-  onRoleChange,
   onNavigate,
   onSignOut,
   onChangePassword,
   darkMode,
   onToggleDarkMode,
   toast,
+  notifications = [],
+  unreadCount = 0,
+  orderCount = 0,
+  onReadNotification,
   children,
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const closeSettings = () => setSettingsOpen(false)
   useEffect(() => {
     if (!mobileOpen) return undefined
@@ -267,26 +271,18 @@ export function AppLayout({
             >
               <Icon name={item.icon} />
               <span className="nav-item__label">{item.label}</span>
-              {item.path === '/orders' && <span className="nav-item__count">3</span>}
+              {item.path === '/orders' && orderCount > 0 && (
+                <span className="nav-item__count">{orderCount}</span>
+              )}
             </button>
           ))}
         </nav>
         <div className="sidebar__bottom">
-          <div className="sidebar__role-label">DEMO ROLE</div>
+          <div className="sidebar__role-label">ACCOUNT ROLE</div>
           <label className="role-select-wrap">
-            <span className="sr-only">Switch demo role</span>
-            <select
-              value={role}
-              onChange={(event) => {
-                onRoleChange(event.target.value)
-                setMobileOpen(false)
-              }}
-            >
-              {Object.keys(groups).map((name) => (
-                <option key={name} value={name}>
-                  {name === 'Administrator' ? 'Mother Admin' : name}
-                </option>
-              ))}
+            <span className="sr-only">Your account role</span>
+            <select value={role} disabled aria-label="Your account role">
+              <option value={role}>{role === 'Administrator' ? 'Mother Admin' : role}</option>
             </select>
             <Icon name="chevron" size={15} />
           </label>
@@ -304,7 +300,7 @@ export function AppLayout({
                   ? profile.name
                   : `${role === 'Administrator' ? 'Mother Admin' : role} account`}
               </strong>
-              <span>{role === 'Student' ? profile.schoolId : 'Demo workspace'}</span>
+              <span>{profile.schoolId || profile.email}</span>
             </div>
             <button
               type="button"
@@ -334,10 +330,40 @@ export function AppLayout({
             Workspace <span>/</span> <strong>{title}</strong>
           </div>
           <div className="topbar__actions">
-            <button type="button" className="icon-button notification-button" aria-label="Notifications">
-              <Icon name="bell" />
-              <span />
-            </button>
+            <div className="notification-area">
+              <button
+                type="button"
+                className="icon-button notification-button"
+                aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+                aria-expanded={notificationsOpen}
+                onClick={() => setNotificationsOpen((current) => !current)}
+              >
+                <Icon name="bell" />
+                {unreadCount > 0 && <span className="notification-count">{unreadCount}</span>}
+              </button>
+              {notificationsOpen && (
+                <section className="notification-panel" aria-label="Order notifications">
+                  <div className="notification-panel__heading">
+                    <strong>Notifications</strong>
+                    <button type="button" onClick={() => setNotificationsOpen(false)}>Close</button>
+                  </div>
+                  {notifications.slice(0, 12).map((notification) => (
+                    <button
+                      type="button"
+                      className={`notification-item${notification.read_at ? '' : ' notification-item--unread'}`}
+                      key={notification.id}
+                      onClick={() => onReadNotification(notification)}
+                    >
+                      <span>{notification.message}</span>
+                      <small>{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(notification.created_at))}</small>
+                    </button>
+                  ))}
+                  {!notifications.length && (
+                    <p className="notification-panel__empty">You’re all caught up.</p>
+                  )}
+                </section>
+              )}
+            </div>
             <button
               type="button"
               className="profile-settings-trigger"

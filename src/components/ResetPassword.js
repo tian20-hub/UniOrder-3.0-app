@@ -1,57 +1,48 @@
 import { useState } from 'react'
 import { Button } from './Shared'
+import { requireSupabase } from '../lib/supabase'
 
-function createResetCode() {
-  const value = window.crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000
-  return String(value).padStart(6, '0')
-}
-
-export default function ResetPassword({ onNavigate }) {
+export default function ResetPassword({ onNavigate, authenticated = false, onComplete }) {
   const [email, setEmail] = useState('')
-  const [code, setCode] = useState('')
-  const [resetCode, setResetCode] = useState('')
-  const [step, setStep] = useState('email')
+  const [step, setStep] = useState(() => (
+    authenticated || window.location.hash.includes('type=recovery') ? 'password' : 'email'
+  ))
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState('error')
+  const [busy, setBusy] = useState(false)
 
   const showMessage = (text, type = 'error') => {
     setMessage(text)
     setMessageType(type)
   }
 
-  const sendCode = (event) => {
+  const sendCode = async (event) => {
     event.preventDefault()
     const normalizedEmail = email.trim()
     if (!normalizedEmail) {
-      showMessage('Enter your email address to receive a reset code.')
+      showMessage('Enter your email address to receive a reset link.')
       return
     }
 
-    setEmail(normalizedEmail)
-    setCode('')
-    setResetCode(createResetCode())
-    setStep('code')
-    showMessage('A demo reset code is ready below.', 'success')
+    setBusy(true)
+    try {
+      const { error } = await requireSupabase().auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+      if (error) throw error
+      setEmail(normalizedEmail)
+      setStep('sent')
+      showMessage('If an account exists for that email, a password reset link is on its way.', 'success')
+    } catch (error) {
+      showMessage(error.message || 'Unable to send a reset link. Please try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const verifyCode = (event) => {
-    event.preventDefault()
-    if (!/^\d{6}$/.test(code)) {
-      showMessage('Enter the 6-digit code to continue.')
-      return
-    }
-    if (code !== resetCode) {
-      showMessage('That code is not correct. Check the code below and try again.')
-      return
-    }
-
-    setStep('password')
-    showMessage('')
-  }
-
-  const savePassword = (event) => {
+  const savePassword = async (event) => {
     event.preventDefault()
     if (password.length < 6) {
       showMessage('Choose a password with at least 6 characters.')
@@ -62,28 +53,31 @@ export default function ResetPassword({ onNavigate }) {
       return
     }
 
-    setStep('done')
-    showMessage('Your password has been reset in this demo.', 'success')
+    setBusy(true)
+    try {
+      const { error } = await requireSupabase().auth.updateUser({ password })
+      if (error) throw error
+      setStep('done')
+      showMessage('Your password has been updated.', 'success')
+      onComplete?.()
+    } catch (error) {
+      showMessage(error.message || 'Unable to update your password. Request a new reset link and try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const resendCode = () => {
-    setResetCode(createResetCode())
-    setCode('')
-    showMessage('A new demo reset code is ready below.', 'success')
-  }
-
-  const stepNumber = step === 'email' ? 1 : step === 'code' ? 2 : 3
   const title = step === 'email'
     ? 'Forgot your password?'
-    : step === 'code'
+    : step === 'sent'
       ? 'Check your inbox'
       : step === 'password'
         ? 'Choose a new password'
         : 'Password reset complete'
   const description = step === 'email'
     ? 'Enter your school email to start resetting your password.'
-    : step === 'code'
-      ? `Enter the 6-digit code for ${email}.`
+    : step === 'sent'
+      ? `Follow the secure link sent to ${email}.`
       : step === 'password'
         ? 'Choose a new password for your account.'
         : `Your password reset for ${email} is complete.`
@@ -98,11 +92,11 @@ export default function ResetPassword({ onNavigate }) {
             <h2>LET&apos;S GET<br />YOU BACK.</h2>
             <p>Reset your password and get back to your school day.</p>
             <div className="recovery-steps">
-              <span className={stepNumber > 1 ? 'is-done' : 'is-current'}>1</span>
-              <i className={stepNumber > 1 ? 'is-done' : ''} />
-              <span className={stepNumber > 2 ? 'is-done' : stepNumber === 2 ? 'is-current' : ''}>2</span>
-              <i className={stepNumber > 2 ? 'is-done' : ''} />
-              <span className={stepNumber === 3 ? 'is-current' : ''}>3</span>
+              <span className={step !== 'email' ? 'is-done' : 'is-current'}>1</span>
+              <i className={step !== 'email' ? 'is-done' : ''} />
+              <span className={step === 'password' || step === 'done' ? 'is-current' : ''}>2</span>
+              <i className={step === 'done' ? 'is-done' : ''} />
+              <span className={step === 'done' ? 'is-current' : ''}>3</span>
             </div>
             <span className="login-card__welcome-footer">EMAIL · VERIFY · RESET</span>
           </div>
@@ -142,40 +136,10 @@ export default function ResetPassword({ onNavigate }) {
                   required
                 />
               </label>
-              <Button type="submit" className="login-submit">
-                Send reset code <span aria-hidden="true">→</span>
+              <Button type="submit" className="login-submit" disabled={busy}>
+                Send reset link <span aria-hidden="true">→</span>
               </Button>
             </form>
-          )}
-
-          {step === 'code' && (
-            <>
-              <div className="recovery-demo-code" aria-label={`Demo reset code: ${resetCode}`}>
-                <span>DEMO RESET CODE</span>
-                <strong>{resetCode}</strong>
-              </div>
-              <form className="login-form" onSubmit={verifyCode}>
-                <label className="login-field">
-                  <span>One-time code</span>
-                  <input
-                    inputMode="numeric"
-                    pattern="[0-9]{6}"
-                    maxLength={6}
-                    autoComplete="one-time-code"
-                    placeholder="Enter your 6-digit code"
-                    value={code}
-                    onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                    required
-                  />
-                </label>
-                <Button type="submit" className="login-submit">
-                  Verify code <span aria-hidden="true">→</span>
-                </Button>
-                <button type="button" className="login-link recovery-resend" onClick={resendCode}>
-                  Resend code
-                </button>
-              </form>
-            </>
           )}
 
           {step === 'password' && (
@@ -204,13 +168,18 @@ export default function ResetPassword({ onNavigate }) {
                   required
                 />
               </label>
-              <Button type="submit" className="login-submit">
+              <Button type="submit" className="login-submit" disabled={busy}>
                 Reset password <span aria-hidden="true">→</span>
               </Button>
             </form>
           )}
 
           {step === 'done' && (
+            <Button type="button" className="login-submit" onClick={() => onNavigate('/login')}>
+              Back to sign in <span aria-hidden="true">→</span>
+            </Button>
+          )}
+          {step === 'sent' && (
             <Button type="button" className="login-submit" onClick={() => onNavigate('/login')}>
               Back to sign in <span aria-hidden="true">→</span>
             </Button>
@@ -225,9 +194,6 @@ export default function ResetPassword({ onNavigate }) {
             </div>
           )}
 
-          <p className="recovery-note">
-            Demo mode: no email is sent. Use the reset code shown here to continue.
-          </p>
         </section>
       </section>
 

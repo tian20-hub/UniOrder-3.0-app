@@ -6,6 +6,7 @@ function paymentTone(status) {
   if (status === 'Completed') return 'green'
   if (status === 'Ready for pickup') return 'blue'
   if (status === 'Processing') return 'purple'
+  if (status === 'Cancelled') return 'neutral'
   return 'amber'
 }
 
@@ -30,18 +31,26 @@ function formatSubmittedAt(order) {
   }).format(timestamp)
 }
 
-export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
+export default function FinancePayments({
+  orders,
+  requests = [],
+  onUpdateOrder,
+  onResolveRequest,
+}) {
   const [filter, setFilter] = useState('All orders')
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('newest')
 
   const pending = orders.filter((order) => order.status === 'Awaiting payment')
   const ready = orders.filter((order) => order.status === 'Ready for pickup')
+  const processing = orders.filter((order) => order.status === 'Processing')
+  const openRequests = requests.filter((request) => request.status === 'Open')
 
   const filteredOrders = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
     const visibleOrders = orders.filter((order) => {
       if (filter === 'Needs confirmation') return order.status === 'Awaiting payment'
+      if (filter === 'In preparation') return order.status === 'Processing'
       if (filter === 'Ready to release') return order.status === 'Ready for pickup'
       return true
     }).filter((order) => {
@@ -72,15 +81,8 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
     .filter((order) => order.status !== 'Awaiting payment')
     .reduce((sum, order) => sum + order.total, 0)
 
-  const updateOrder = (id, nextStatus) => {
-    onUpdateOrders((current) =>
-      current.map((order) => (order.id === id ? { ...order, status: nextStatus } : order))
-    )
-    onNotify(
-      nextStatus === 'Processing'
-        ? 'Payment confirmed. The order is now processing.'
-        : 'Order released and marked complete.'
-    )
+  const updateOrder = async (order, nextStatus) => {
+    await onUpdateOrder(order, nextStatus)
   }
 
   return (
@@ -132,14 +134,14 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
             <Icon name="receipt" size={19} />
           </div>
           <div>
-            <strong>{pending.length + ready.length} orders need your attention</strong>
-            <span>Review who submitted each order, when it was sent, and its total before confirming payment or release.</span>
+            <strong>{pending.length + processing.length + ready.length} orders need your attention</strong>
+            <span>Confirm payment, prepare the order, and release it through the campus workflow.</span>
           </div>
         </div>
         <div className="finance-queue-controls">
           <div className="table-toolbar">
             <div className="table-tabs" role="group" aria-label="Filter orders">
-              {['All orders', 'Needs confirmation', 'Ready to release'].map((item) => (
+              {['All orders', 'Needs confirmation', 'In preparation', 'Ready to release'].map((item) => (
                 <button
                   key={item}
                   type="button"
@@ -149,6 +151,7 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
                 >
                   {item}
                   {item === 'Needs confirmation' && pending.length > 0 && <span>{pending.length}</span>}
+                  {item === 'In preparation' && processing.length > 0 && <span>{processing.length}</span>}
                   {item === 'Ready to release' && ready.length > 0 && <span>{ready.length}</span>}
                 </button>
               ))}
@@ -241,20 +244,27 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
                     {order.status === 'Awaiting payment' ? (
                       <Button
                         className="table-action"
-                        onClick={() => updateOrder(order.id, 'Processing')}
+                        onClick={() => updateOrder(order, 'Processing')}
                       >
                         <Icon name="check" size={15} /> Confirm payment
+                      </Button>
+                    ) : order.status === 'Processing' ? (
+                      <Button
+                        className="table-action"
+                        onClick={() => updateOrder(order, 'Ready for pickup')}
+                      >
+                        <Icon name="package" size={15} /> Mark ready
                       </Button>
                     ) : order.status === 'Ready for pickup' ? (
                       <Button
                         className="table-action table-action--release"
-                        onClick={() => updateOrder(order.id, 'Completed')}
+                        onClick={() => updateOrder(order, 'Completed')}
                       >
                         Release order <Icon name="arrow" size={14} />
                       </Button>
                     ) : (
                       <span className="muted-action">
-                        {order.status === 'Completed' ? 'Released' : 'In progress'}
+                        {order.status === 'Completed' ? 'Released' : order.status}
                       </span>
                     )}
                   </td>
@@ -276,7 +286,48 @@ export default function FinancePayments({ orders, onUpdateOrders, onNotify }) {
           <span className="finance-footnote__check">
             <Icon name="check" size={13} />
           </span>{' '}
-          Every confirmation is logged to the campus finance record.
+          Order changes are recorded in the order history.
+        </div>
+      </section>
+      <section className="surface finance-requests">
+        <PageIntro
+          eyebrow="STUDENT REQUESTS"
+          title="Exchanges & returns"
+          subtitle={`${openRequests.length} request${openRequests.length === 1 ? '' : 's'} waiting for review.`}
+        />
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr><th>ORDER</th><th>REQUEST</th><th>DETAILS</th><th>SUBMITTED</th><th>ACTION</th></tr>
+            </thead>
+            <tbody>
+              {openRequests.map((request) => (
+                <tr key={request.id}>
+                  <td><strong className="order-id">{request.orderNumber}</strong></td>
+                  <td>{request.request_type}</td>
+                  <td>{request.message || 'No additional details.'}</td>
+                  <td>{formatSubmittedAt({ submittedAt: request.created_at })}</td>
+                  <td>
+                    <div className="finance-request-actions">
+                      <Button className="table-action" onClick={() => onResolveRequest(request, 'Resolved')}>
+                        Approve
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="table-action"
+                        onClick={() => onResolveRequest(request, 'Declined')}
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!openRequests.length && (
+                <tr><td colSpan="5" className="table-empty">No exchange or return requests to review.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
     </div>

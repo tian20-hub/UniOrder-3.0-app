@@ -9,11 +9,21 @@ function statusTone(status) {
   return 'neutral'
 }
 
-export default function OrderHistory({ orders, onNotify }) {
+export default function OrderHistory({
+  orders,
+  requests = [],
+  role = 'Student',
+  onNotify,
+  onCancelOrder,
+  onRequestChange,
+}) {
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [supportOpen, setSupportOpen] = useState(false)
   const [supportOrderId, setSupportOrderId] = useState('')
   const [supportMessage, setSupportMessage] = useState('')
+  const [requestType, setRequestType] = useState('Exchange')
+  const [requestMessage, setRequestMessage] = useState('')
+  const [requestSubmitting, setRequestSubmitting] = useState(false)
 
   useEffect(() => {
     if (!selectedOrder && !supportOpen) return undefined
@@ -182,6 +192,27 @@ export default function OrderHistory({ orders, onNotify }) {
               <div><dt>Total</dt><dd>{formatPhp(selectedOrder.total)}</dd></div>
               <div><dt>Status</dt><dd><Badge tone={statusTone(selectedOrder.status)}>{selectedOrder.status}</Badge></dd></div>
             </dl>
+            {selectedOrder.statusHistory?.length > 0 && (
+              <div className="order-status-timeline">
+                <strong>Status history</strong>
+                <ol>
+                  {selectedOrder.statusHistory.map((entry) => (
+                    <li key={entry.id}>
+                      <span>{entry.next_status}</span>
+                      <time dateTime={entry.created_at}>
+                        {new Intl.DateTimeFormat('en', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        }).format(new Date(entry.created_at))}
+                      </time>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
             {selectedOrder.orderDetails?.length > 0 && (
               <div className="order-dialog__items">
                 <strong>Items and sizes</strong>
@@ -192,6 +223,65 @@ export default function OrderHistory({ orders, onNotify }) {
                   </div>
                 ))}
               </div>
+            )}
+            {requests.filter((request) => request.order_id === selectedOrder.dbId).map((request) => (
+              <div className="order-request-status" key={request.id}>
+                {request.request_type} request · {request.status}
+                {request.message && <p>{request.message}</p>}
+              </div>
+            ))}
+            {role === 'Student' && selectedOrder.status === 'Awaiting payment' && (
+              <button
+                type="button"
+                className="button button--outline order-cancel-button"
+                onClick={async () => {
+                  if (!window.confirm(`Cancel order ${selectedOrder.id}? Its reserved stock will be returned.`)) return
+                  if (await onCancelOrder(selectedOrder)) setSelectedOrder(null)
+                }}
+              >
+                Cancel this order
+              </button>
+            )}
+            {role === 'Student' && ['Ready for pickup', 'Completed'].includes(selectedOrder.status) && (
+              requests.every((request) => request.order_id !== selectedOrder.dbId || request.status !== 'Open') && (
+                <form
+                  className="order-change-request"
+                  onSubmit={async (event) => {
+                    event.preventDefault()
+                    setRequestSubmitting(true)
+                    try {
+                      const sent = await onRequestChange(selectedOrder, requestType, requestMessage)
+                      if (sent) {
+                        setRequestMessage('')
+                        setSelectedOrder(null)
+                      }
+                    } finally {
+                      setRequestSubmitting(false)
+                    }
+                  }}
+                >
+                  <label>
+                    Request an exchange or return
+                    <select value={requestType} onChange={(event) => setRequestType(event.target.value)}>
+                      <option>Exchange</option>
+                      <option>Return</option>
+                    </select>
+                  </label>
+                  <label>
+                    Details
+                    <textarea
+                      rows="3"
+                      maxLength={1000}
+                      value={requestMessage}
+                      onChange={(event) => setRequestMessage(event.target.value)}
+                      placeholder="Describe the item and what you need."
+                    />
+                  </label>
+                  <button type="submit" className="button button--outline" disabled={requestSubmitting}>
+                    Submit {requestType.toLowerCase()} request
+                  </button>
+                </form>
+              )
             )}
             <button
               type="button"

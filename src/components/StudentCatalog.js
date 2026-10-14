@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button, Icon } from './Shared'
 import { defaultAdminSettings } from '../data/adminSettings'
-import { courses, getCourseUniformsForCourse } from '../data/courses'
-import { convertEtbToPhp, formatPhp } from '../utils/currency'
+import { courses } from '../data/courses'
+import { formatPhp } from '../utils/currency'
 
 const courseAbbreviations = {
   'BS Information Technology': 'BSIT',
@@ -27,156 +27,8 @@ const filterCourses = [
   ...courses.filter((course) => !filterCourseOrder.includes(course)),
 ]
 
-const courseDisplayNames = {
-  'BS Nursing': 'Nursing',
-  'BS Medical Laboratory Sciences': 'Medical Laboratory Sciences',
-  'BS Psychology': 'Psychology',
-  'BS Radiologic Technology': 'Radiologic Technology',
-  'BS Accountancy': 'Accountancy',
-  'BS Business Administration – Financial Management': 'Business Administration – Financial Management',
-  'BS Business Administration – Marketing Management': 'Business Administration – Marketing Management',
-  'BS Hospitality Management': 'Hospitality Management',
-  'BS Tourism Management': 'Tourism Management',
-  'Bachelor of Elementary Education': 'Elementary Education',
-  'Bachelor of Secondary Education – Filipino': 'Secondary Education – Filipino',
-  'Bachelor of Secondary Education – English': 'Secondary Education – English',
-  'BS Criminology': 'Criminology',
-  'BS Information Technology': 'Information Technology',
-}
-
-const defaultSizes = [
-  { label: 'XS', stock: 5 },
-  { label: 'S', stock: 8 },
-  { label: 'M', stock: 12 },
-  { label: 'L', stock: 6 },
-  { label: 'XL', stock: 3 },
-]
-
-const courseSpecificItems = {
-  'BS Nursing': [
-    {
-      name: 'Nursing Uniform - Set A',
-      priceMultiplier: 1,
-      sizes: [
-        { label: 'XS', stock: 5 },
-        { label: 'S', stock: 8 },
-        { label: 'M', stock: 12 },
-        { label: 'L', stock: 6 },
-        { label: 'XL', stock: 3 },
-      ],
-    },
-    {
-      name: 'Nursing Uniform - Set B (Clinical)',
-      priceMultiplier: 1.12,
-      sizes: [
-        { label: 'S', stock: 4 },
-        { label: 'M', stock: 7 },
-        { label: 'L', stock: 5 },
-        { label: 'XL', stock: 2 },
-      ],
-    },
-    {
-      name: 'Laboratory Gown',
-      priceEtb: 620,
-      sizes: [{ label: 'Free Size', stock: 15 }],
-    },
-  ],
-  'BS Medical Laboratory Sciences': [
-    {
-      name: 'MedTech Uniform - Set A',
-      priceMultiplier: 1,
-      sizes: [
-        { label: 'S', stock: 5 },
-        { label: 'M', stock: 9 },
-        { label: 'L', stock: 6 },
-        { label: 'XL', stock: 3 },
-      ],
-    },
-    {
-      name: 'Laboratory Gown',
-      priceEtb: 620,
-      sizes: [
-        { label: 'S', stock: 6 },
-        { label: 'M', stock: 10 },
-        { label: 'L', stock: 8 },
-        { label: 'XL', stock: 4 },
-      ],
-    },
-  ],
-  'BS Psychology': [
-    {
-      name: 'Psychology Uniform - Set A',
-      priceMultiplier: 1,
-      sizes: [
-        { label: 'XS', stock: 4 },
-        { label: 'S', stock: 7 },
-        { label: 'M', stock: 10 },
-        { label: 'L', stock: 5 },
-        { label: 'XL', stock: 2 },
-      ],
-    },
-  ],
-  'BS Radiologic Technology': [
-    {
-      name: 'RadTech Uniform - Set A',
-      priceMultiplier: 1,
-      sizes: [
-        { label: 'S', stock: 3 },
-        { label: 'M', stock: 6 },
-        { label: 'L', stock: 4 },
-        { label: 'XL', stock: 2 },
-      ],
-    },
-    {
-      name: 'Protective Apron',
-      priceEtb: 480,
-      sizes: [
-        { label: 'M', stock: 5 },
-        { label: 'L', stock: 5 },
-        { label: 'XL', stock: 3 },
-      ],
-    },
-  ],
-}
-
-const baseProductPricesEtb = {
-  1: 420,
-  2: 680,
-  3: 950,
-  4: 610,
-  5: 520,
-  6: 360,
-}
-
-function getCourseSetPrice(course) {
-  return getCourseUniformsForCourse(course).reduce(
-    (total, productId) => total + (baseProductPricesEtb[productId] || 0),
-    0
-  )
-}
-
-function getCatalogItems() {
-  return courses.flatMap((course) => {
-    const basePriceEtb = getCourseSetPrice(course)
-    const definitions = courseSpecificItems[course] || [{
-      name: `${courseDisplayNames[course]} Uniform - Set A`,
-      priceMultiplier: 1,
-      sizes: defaultSizes,
-    }]
-
-    return definitions.map((definition, index) => ({
-      id: `${courseAbbreviations[course]}-${index}`,
-      course,
-      courseLabel: courseDisplayNames[course],
-      name: definition.name,
-      sizes: definition.sizes,
-      stock: definition.sizes.reduce((total, size) => total + size.stock, 0),
-      price: convertEtbToPhp(definition.priceEtb ?? basePriceEtb * (definition.priceMultiplier || 1)),
-    }))
-  })
-}
-
 export default function StudentCatalog({
+  products = [],
   onCreateOrder,
   onNotify,
   adminSettings = defaultAdminSettings,
@@ -189,22 +41,34 @@ export default function StudentCatalog({
   const [selectedQuantity, setSelectedQuantity] = useState(1)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState(adminSettings.paymentMethods[0] || '')
+  const [currentTime, setCurrentTime] = useState(0)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [checkoutError, setCheckoutError] = useState('')
-  const catalogItems = useMemo(getCatalogItems, [])
+  const [orderSubmitting, setOrderSubmitting] = useState(false)
+  const catalogItems = products
+  const deadlineTimestamp = Date.parse(adminSettings.orderDeadline || '')
   const deadlinePassed = Boolean(
-    adminSettings.orderDeadline
-    && Date.now() > new Date(adminSettings.orderDeadline).getTime()
+    currentTime
+    && adminSettings.orderDeadline
+    && Number.isFinite(deadlineTimestamp)
+    && currentTime > deadlineTimestamp
   )
+  const selectedPaymentMethod = adminSettings.paymentMethods.includes(paymentMethod)
+    ? paymentMethod
+    : adminSettings.paymentMethods[0] || ''
   const orderingAvailable = adminSettings.orderingEnabled
     && !deadlinePassed
     && adminSettings.paymentMethods.length > 0
 
   useEffect(() => {
-    if (!adminSettings.paymentMethods.includes(paymentMethod)) {
-      setPaymentMethod(adminSettings.paymentMethods[0] || '')
+    const updateCurrentTime = () => setCurrentTime(Date.now())
+    const initialUpdate = window.setTimeout(updateCurrentTime, 0)
+    const interval = window.setInterval(updateCurrentTime, 30_000)
+    return () => {
+      window.clearTimeout(initialUpdate)
+      window.clearInterval(interval)
     }
-  }, [adminSettings.paymentMethods, paymentMethod])
+  }, [])
 
   useEffect(() => {
     if (!checkoutOpen && !selectedItem) return undefined
@@ -282,6 +146,7 @@ export default function StudentCatalog({
       }
       return [...current, {
         id: selectedItem.id,
+        sizeId: size.id,
         name: selectedItem.name,
         course: selectedItem.course,
         size: selectedSize,
@@ -316,22 +181,27 @@ export default function StudentCatalog({
     ))
   }
 
-  const placeOrder = (event) => {
+  const placeOrder = async (event) => {
     event.preventDefault()
     if (adminSettings.terms && !termsAccepted) {
       setCheckoutError('Please accept the checkout terms to continue.')
       return
     }
-    if (!paymentMethod || !adminSettings.paymentMethods.includes(paymentMethod)) {
+    if (!selectedPaymentMethod) {
       setCheckoutError('Choose an available payment method.')
       return
     }
-    const created = onCreateOrder(cart, total, paymentMethod)
-    if (created === false) return
-    setCart([])
-    setCheckoutOpen(false)
-    setTermsAccepted(false)
-    setCheckoutError('')
+    setOrderSubmitting(true)
+    try {
+      const created = await onCreateOrder(cart, total, selectedPaymentMethod)
+      if (!created) return
+      setCart([])
+      setCheckoutOpen(false)
+      setTermsAccepted(false)
+      setCheckoutError('')
+    } finally {
+      setOrderSubmitting(false)
+    }
   }
 
   return (
@@ -626,7 +496,7 @@ export default function StudentCatalog({
                       type="radio"
                       name="payment-method"
                       value={method}
-                      checked={paymentMethod === method}
+                      checked={selectedPaymentMethod === method}
                       onChange={() => setPaymentMethod(method)}
                     />
                     <span>{method}</span>
@@ -653,8 +523,8 @@ export default function StudentCatalog({
               {checkoutError && <p className="product-form__error" role="alert">{checkoutError}</p>}
               <div className="product-form__actions">
                 <Button type="button" variant="outline" onClick={() => setCheckoutOpen(false)}>Back to catalog</Button>
-                <Button type="submit" disabled={!paymentMethod || !adminSettings.paymentMethods.length}>
-                  Place order <Icon name="arrow" size={16} />
+                <Button type="submit" disabled={orderSubmitting || !paymentMethod || !adminSettings.paymentMethods.length}>
+                  {orderSubmitting ? 'Placing order…' : 'Place order'} <Icon name="arrow" size={16} />
                 </Button>
               </div>
             </form>

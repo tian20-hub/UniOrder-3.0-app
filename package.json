@@ -8,9 +8,11 @@
     "start": "vite --host 0.0.0.0",
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "demo:accounts": "node scripts/create-demo-accounts.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -22,4 +24,3 @@
     "vite": "^6.0.7"
   }
 }
-

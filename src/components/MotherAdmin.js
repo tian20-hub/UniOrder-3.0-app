@@ -4,13 +4,6 @@ import Inventory from './Inventory'
 import { defaultAdminSettings } from '../data/adminSettings'
 import { formatEtbAsPhp } from '../utils/currency'
 
-const defaultUsers = [
-  { name: 'Amina Mekonnen', email: 'amina.m@bluenile.edu', role: 'Student', group: 'Grade 11 · Blue Nile', status: 'Active', initials: 'AM' },
-  { name: 'Marta Bekele', email: 'marta.b@bluenile.edu', role: 'Finance', group: 'Finance office', status: 'Active', initials: 'MB' },
-  { name: 'Liya Girma', email: 'liya.g@bluenile.edu', role: 'Student', group: 'Grade 9 · Blue Nile', status: 'Active', initials: 'LG' },
-  { name: 'Tomas Abebe', email: 'tomas.a@bluenile.edu', role: 'Administrator', group: 'Mother Admin', status: 'Active', initials: 'TA' },
-]
-
 const sections = [
   { id: 'accounts', label: 'Accounts' },
   { id: 'stocks', label: 'Stocks update' },
@@ -28,33 +21,18 @@ function csvCell(value) {
   return `"${safeText.replaceAll('"', '""')}"`
 }
 
-function readUsers() {
-  try {
-    const saved = window.localStorage.getItem('uniorder-admin-accounts')
-    if (!saved) return defaultUsers
-    const users = JSON.parse(saved)
-    if (!Array.isArray(users)) return defaultUsers
-    return users.filter((user) => (
-      user
-      && typeof user.name === 'string'
-      && typeof user.email === 'string'
-      && roles.includes(user.role)
-      && ['Active', 'Invited', 'Paused'].includes(user.status)
-    ))
-  } catch (error) {
-    console.error('Unable to load administrator accounts.', error)
-    return defaultUsers
-  }
-}
-
 export default function MotherAdmin({
   onNotify,
+  accounts: users,
+  onInviteUser,
+  onSetAccountRole,
+  onSetAccountAccess,
   inventory,
-  onUpdateInventory,
+  onSaveProduct,
+  onAdjustStock,
   adminSettings,
   onSaveSettings,
 }) {
-  const [users, setUsers] = useState(readUsers)
   const [filter, setFilter] = useState('All accounts')
   const [section, setSection] = useState('accounts')
   const [accountFormOpen, setAccountFormOpen] = useState(false)
@@ -68,58 +46,43 @@ export default function MotherAdmin({
 
   const visibleUsers = filter === 'All accounts' ? users : users.filter((user) => user.role === filter)
   const activeUsers = users.filter((user) => user.status === 'Active').length
-  const inventoryUnits = inventory.reduce((total, item) => total + item.stock, 0)
-  const lowStockItems = inventory.filter((item) => item.stock <= item.minimum).length
+  const inventoryUnits = inventory.reduce(
+    (total, item) => total + item.sizes.reduce((sum, size) => sum + size.stock, 0),
+    0
+  )
+  const lowStockItems = inventory.filter((item) => (
+    item.sizes.some((size) => size.stock <= size.minimum)
+  )).length
 
-  const saveUsers = (nextUsers, message) => {
-    try {
-      window.localStorage.setItem('uniorder-admin-accounts', JSON.stringify(nextUsers))
-      setUsers(nextUsers)
-      onNotify(message)
-    } catch (error) {
-      console.error('Unable to save administrator accounts.', error)
-      onNotify('Could not save the account changes. Please check browser storage.')
-    }
+  const toggleStatus = (user) => {
+    onSetAccountAccess(user, user.status !== 'Active')
   }
 
-  const toggleStatus = (email) => {
-    const target = users.find((user) => user.email === email)
-    if (!target) return
-    const nextUsers = users.map((user) => (
-      user.email === email
-        ? { ...user, status: user.status === 'Active' ? 'Paused' : 'Active' }
-        : user
-    ))
-    saveUsers(nextUsers, `${target.name} access updated.`)
-  }
-
-  const addAccount = (event) => {
+  const addAccount = async (event) => {
     event.preventDefault()
     const normalizedEmail = account.email.trim().toLowerCase()
     if (users.some((user) => user.email.toLowerCase() === normalizedEmail)) {
       setAccountError('An account with this email already exists.')
       return
     }
-    const name = account.name.trim()
-    const newAccount = {
+    const invited = await onInviteUser({
       ...account,
-      name,
+      name: account.name.trim(),
       email: normalizedEmail,
-      group: account.group.trim() || account.role,
-      status: 'Invited',
-      initials: name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join(''),
+      group: account.group.trim(),
+    })
+    if (invited) {
+      setAccount(emptyAccount)
+      setAccountError('')
+      setAccountFormOpen(false)
     }
-    saveUsers([...users, newAccount], `Invitation prepared for ${name}.`)
-    setAccount(emptyAccount)
-    setAccountError('')
-    setAccountFormOpen(false)
   }
 
   const exportUsers = () => {
     try {
       const rows = [
         ['Name', 'Email', 'Role', 'Group', 'Status'],
-        ...visibleUsers.map((user) => [user.name, user.email, user.role, user.group, user.status]),
+        ...visibleUsers.map((user) => [user.name, user.email, user.role, user.group_name, user.status]),
       ]
       const csv = rows.map((row) => row.map(csvCell).join(',')).join('\r\n')
       const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }))
@@ -137,10 +100,9 @@ export default function MotherAdmin({
     }
   }
 
-  const saveSettings = (event) => {
+  const saveSettings = async (event) => {
     event.preventDefault()
-    onSaveSettings(settingsDraft)
-    onNotify('Mother Admin settings saved.')
+    await onSaveSettings(settingsDraft)
   }
 
   const updateSettings = (updates) => {
@@ -189,7 +151,7 @@ export default function MotherAdmin({
           <PageIntro
             eyebrow="PEOPLE & ACCESS"
             title="Accounts"
-            subtitle="Create and manage Student, Finance, and Administrator accounts."
+            subtitle="Invite users, assign trusted roles, and manage account access."
             action={
               <Button onClick={() => {
                 setAccountError('')
@@ -238,7 +200,7 @@ export default function MotherAdmin({
                 />
               </label>
               {accountError && <p className="mother-admin-error" role="alert">{accountError}</p>}
-              <Button type="submit"><Icon name="plus" size={16} /> Create account invite</Button>
+              <Button type="submit"><Icon name="plus" size={16} /> Send invitation</Button>
             </form>
           )}
           <div className="table-toolbar">
@@ -268,7 +230,7 @@ export default function MotherAdmin({
               </thead>
               <tbody>
                 {visibleUsers.map((user, index) => (
-                  <tr key={user.email}>
+                  <tr key={user.id}>
                     <td>
                       <div className="member-cell">
                         <span className={`member-avatar member-avatar--${index % 4}`}>{user.initials}</span>
@@ -276,12 +238,25 @@ export default function MotherAdmin({
                       </div>
                     </td>
                     <td><Badge tone={user.role === 'Finance' ? 'purple' : user.role === 'Administrator' ? 'blue' : 'neutral'}>{displayRole(user.role)}</Badge></td>
-                    <td>{user.group}</td>
+                    <td>{user.group_name}</td>
                     <td><Badge tone={user.status === 'Active' ? 'green' : user.status === 'Invited' ? 'amber' : 'neutral'}><span className="badge-dot" />{user.status}</Badge></td>
                     <td>
-                      <button type="button" className="member-action" onClick={() => toggleStatus(user.email)}>
-                        {user.status === 'Active' ? 'Pause' : 'Activate'}
-                      </button>
+                      <div className="member-actions">
+                        <select
+                          aria-label={`Change role for ${user.name}`}
+                          value={user.role}
+                          onChange={(event) => onSetAccountRole(user, event.target.value)}
+                        >
+                          {roles.map((role) => <option key={role} value={role}>{displayRole(role)}</option>)}
+                        </select>
+                        {user.status === 'Invited'
+                          ? <span className="muted-action">Invite pending</span>
+                          : (
+                            <button type="button" className="member-action" onClick={() => toggleStatus(user)}>
+                              {user.status === 'Active' ? 'Pause' : 'Activate'}
+                            </button>
+                          )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -289,14 +264,15 @@ export default function MotherAdmin({
               </tbody>
             </table>
           </div>
-          <div className="admin-note"><span>i</span><p><strong>Account access</strong> New accounts are created as invitations. Pause an active account to suspend its access.</p></div>
+          <div className="admin-note"><span>i</span><p><strong>Account access</strong> Invitations are sent by Supabase Auth. Roles cannot be selected during public sign-up.</p></div>
         </section>
       )}
 
       {section === 'stocks' && (
         <Inventory
           inventory={inventory}
-          onUpdateInventory={onUpdateInventory}
+          onSaveProduct={onSaveProduct}
+          onAdjustStock={onAdjustStock}
           onNotify={onNotify}
         />
       )}
@@ -327,12 +303,13 @@ export default function MotherAdmin({
               <input
                 type="number"
                 min="1"
+                max="500"
                 step="1"
                 value={settingsDraft.maxItemsPerOrder || ''}
                 placeholder="No limit"
                 onChange={(event) => updateSettings({ maxItemsPerOrder: event.target.value === '' ? 0 : Number(event.target.value) })}
               />
-              <small>Leave blank for no item-count limit.</small>
+              <small>Leave blank for no campus-specific limit (orders are still capped at 500 items).</small>
             </label>
             <Button type="submit"><Icon name="check" size={16} /> Save order constraints</Button>
           </form>

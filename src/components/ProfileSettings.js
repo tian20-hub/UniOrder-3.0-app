@@ -11,6 +11,7 @@ export default function ProfileSettings({
   onClose,
 }) {
   const [form, setForm] = useState(profile)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -24,9 +25,14 @@ export default function ProfileSettings({
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault()
-    if (onSave(form)) onClose()
+    setSaving(true)
+    try {
+      if (await onSave(form)) onClose()
+    } finally {
+      setSaving(false)
+    }
   }
 
   const initials = form.name
@@ -85,7 +91,14 @@ export default function ProfileSettings({
                 autoComplete="email"
                 required
                 value={form.email}
-                onChange={(event) => updateField('email', event.target.value)}
+                readOnly
+              />
+            </label>
+            <label>
+              <span>Grade / year</span>
+              <input
+                value={form.grade}
+                onChange={(event) => updateField('grade', event.target.value)}
               />
             </label>
             <label>
@@ -99,8 +112,8 @@ export default function ProfileSettings({
             </label>
           </div>
 
-          <button type="submit" className="account-action account-action--save">
-            Save Changes
+          <button type="submit" className="account-action account-action--save" disabled={saving}>
+            {saving ? 'Saving…' : 'Save Changes'}
           </button>
           <button
             type="button"
@@ -137,8 +150,8 @@ export default function ProfileSettings({
           </label>
           <label className="account-preference">
             <span>
-              <strong>Email Notifications</strong>
-              <small>Receive order updates</small>
+              <strong>Order notifications</strong>
+              <small>Receive status updates in this app</small>
             </span>
             <input
               type="checkbox"

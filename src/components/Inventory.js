@@ -1,133 +1,127 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Badge, Button, Icon, PageIntro, StatCard } from './Shared'
 import { courses } from '../data/courses'
 import { formatEtbAsPhp } from '../utils/currency'
 
+const productCategories = ['Uniforms', 'Tops', 'Bottoms', 'Layers', 'Sportswear']
 const emptyProduct = {
+  id: '',
   name: '',
-  category: 'Tops',
+  category: 'Uniforms',
   course: 'All courses',
   color: '',
-  price: '',
-  stock: '',
-  minimum: '',
-}
-const productCategories = ['Tops', 'Bottoms', 'Layers', 'Sportswear']
-
-function createProductId(items) {
-  const lastNumber = items.reduce((maximum, item) => {
-    const number = Number(item.id.match(/\d+$/)?.[0] || 0)
-    return Math.max(maximum, number)
-  }, 0)
-  return `UNI-${String(lastNumber + 1).padStart(3, '0')}`
+  priceEtb: '',
+  sizesText: 'XS:5:1, S:8:2, M:12:3, L:6:2, XL:3:1',
 }
 
-export default function Inventory({ onNotify, inventory: items, onUpdateInventory: setItems }) {
+function parseSizes(value) {
+  const rows = value.split(',').map((part) => part.trim()).filter(Boolean)
+  if (!rows.length) return null
+  const sizes = []
+  for (const row of rows) {
+    const match = row.match(/^([a-z0-9 -]{1,20})\s*:\s*(\d+)\s*:\s*(\d+)$/i)
+    if (!match) return null
+    const label = match[1].trim()
+    if (sizes.some((size) => size.label.toLowerCase() === label.toLowerCase())) return null
+    sizes.push({ label, stock: Number(match[2]), minimum: Number(match[3]) })
+  }
+  return sizes
+}
+
+export default function Inventory({
+  inventory: products,
+  onSaveProduct,
+  onAdjustStock,
+}) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('All stock')
   const [courseFilter, setCourseFilter] = useState('All courses')
-  const [addProductOpen, setAddProductOpen] = useState(false)
+  const [productFormOpen, setProductFormOpen] = useState(false)
   const [product, setProduct] = useState(emptyProduct)
   const [formError, setFormError] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!addProductOpen) return undefined
-    const closeOnEscape = (event) => {
-      if (event.key === 'Escape') setAddProductOpen(false)
-    }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [addProductOpen])
+  const lowStock = products.filter((item) => (
+    item.sizes.some((size) => size.stock <= size.minimum)
+  )).length
+  const inventoryUnits = products.reduce(
+    (total, item) => total + item.sizes.reduce((sum, size) => sum + size.stock, 0),
+    0
+  )
+  const inventoryValue = products.reduce(
+    (total, item) => total + item.sizes.reduce((sum, size) => sum + size.stock, 0) * item.priceEtb,
+    0
+  )
+  const filteredProducts = useMemo(() => products.filter((item) => {
+    const hasLowStock = item.sizes.some((size) => size.stock <= size.minimum)
+    const matchesFilter = filter === 'All stock' || hasLowStock
+    const matchesCourse = courseFilter === 'All courses'
+      || item.course === 'All courses'
+      || item.course === courseFilter
+    const matchesQuery = `${item.name} ${item.category} ${item.course} ${item.color}`
+      .toLowerCase()
+      .includes(query.trim().toLowerCase())
+    return matchesFilter && matchesCourse && matchesQuery
+  }), [products, filter, courseFilter, query])
 
-  const lowStock = items.filter((item) => item.stock <= item.minimum).length
-  const filteredItems = useMemo(() => {
-    return items.filter((item) => {
-      const matchFilter = filter === 'All stock' || (filter === 'Low stock' && item.stock <= item.minimum)
-      const matchCourse = courseFilter === 'All courses'
-        || item.course === 'All courses'
-        || item.course === courseFilter
-      const matchQuery = `${item.name} ${item.id} ${item.category} ${item.course}`.toLowerCase().includes(query.toLowerCase())
-      return matchFilter && matchCourse && matchQuery
-    })
-  }, [items, filter, courseFilter, query])
-
-  const adjustStock = (id, amount) => {
-    setItems((current) =>
-      current.map((item) =>
-        item.id === id ? { ...item, stock: Math.max(0, item.stock + amount) } : item
-      )
-    )
+  const openProductForm = (item = null) => {
+    setProduct(item ? {
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      course: item.course,
+      color: item.color,
+      priceEtb: String(item.priceEtb),
+      sizesText: item.sizes.map((size) => `${size.label}:${size.stock}:${size.minimum}`).join(', '),
+    } : emptyProduct)
+    setFormError('')
+    setProductFormOpen(true)
   }
 
-  const addProduct = (event) => {
+  const saveProduct = async (event) => {
     event.preventDefault()
-    const normalizedName = product.name.trim()
-    if (items.some((item) => (
-      item.name.toLowerCase() === normalizedName.toLowerCase()
-      && item.course === product.course
-    ))) {
-      setFormError('A product with this name already exists for this course.')
+    const sizes = parseSizes(product.sizesText)
+    const priceEtb = Number(product.priceEtb)
+    if (!product.name.trim() || !product.color.trim() || !Number.isFinite(priceEtb) || priceEtb <= 0 || !sizes) {
+      setFormError('Enter a product name, color, valid price, and sizes as label:stock:minimum.')
       return
     }
 
-    const newItem = {
-      id: createProductId(items),
-      name: normalizedName,
-      category: product.category,
-      course: product.course,
-      color: product.color.trim(),
-      price: Number(product.price),
-      stock: Number(product.stock),
-      minimum: Number(product.minimum),
+    setSaving(true)
+    try {
+      const saved = await onSaveProduct({
+        ...product,
+        name: product.name.trim(),
+        color: product.color.trim(),
+        priceEtb,
+        sizes,
+      })
+      if (saved) {
+        setProductFormOpen(false)
+        setProduct(emptyProduct)
+      }
+    } finally {
+      setSaving(false)
     }
-    setItems((current) => [...current, newItem])
-    setProduct(emptyProduct)
-    setFormError('')
-    setAddProductOpen(false)
-    onNotify(`${newItem.name} was added to inventory.`)
   }
 
   return (
     <div className="page-stack">
       <div className="stats-grid inventory-stats">
-        <StatCard
-          label="Total products"
-          value={items.length}
-          change="Across 4 categories"
-          icon="package"
-          tone="blue"
-        />
-        <StatCard
-          label="Units in stock"
-          value={items.reduce((sum, item) => sum + item.stock, 0)}
-          change="Updated just now"
-          icon="grid"
-          tone="green"
-        />
-        <StatCard
-          label="Low stock alerts"
-          value={lowStock}
-          change="Restock recommended"
-          icon="bell"
-          tone="amber"
-        />
-        <StatCard
-          label="Inventory value"
-          value={formatEtbAsPhp(items.reduce((sum, item) => sum + item.stock * item.price, 0))}
-          change="At listed price"
-          icon="chart"
-          tone="purple"
-        />
+        <StatCard label="Catalog products" value={products.length} change="Shared with student catalog" icon="package" tone="blue" />
+        <StatCard label="Units in stock" value={inventoryUnits} change="Across all sizes" icon="grid" tone="green" />
+        <StatCard label="Low-stock alerts" value={lowStock} change="Restock recommended" icon="bell" tone="amber" />
+        <StatCard label="Inventory value" value={formatEtbAsPhp(inventoryValue)} change="At listed price" icon="chart" tone="purple" />
       </div>
 
       <section className="surface inventory-surface">
         <PageIntro
           eyebrow="STOCKROOM"
           title="Product inventory"
-          subtitle="A real-time look at your campus shop stock."
+          subtitle="Size-level stock is shared directly with the student catalog."
           action={
-            <Button onClick={() => setAddProductOpen(true)}>
-              <Icon name="plus" size={17} /> Add product
+            <Button onClick={() => openProductForm()}>
+              <Icon name="plus" size={17} /> Add uniform
             </Button>
           }
         />
@@ -150,7 +144,7 @@ export default function Inventory({ onNotify, inventory: items, onUpdateInventor
             <Icon name="search" size={16} />
             <input
               aria-label="Search inventory"
-              placeholder="Search products..."
+              placeholder="Search uniforms..."
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -171,213 +165,133 @@ export default function Inventory({ onNotify, inventory: items, onUpdateInventor
           <table className="data-table inventory-table">
             <thead>
               <tr>
-                <th>PRODUCT</th>
-                <th>CATEGORY</th>
+                <th>UNIFORM</th>
                 <th>COURSE</th>
-                <th>COLOR</th>
                 <th>UNIT PRICE</th>
-                <th>STOCK LEVEL</th>
-                <th>QUICK ADJUST</th>
+                <th>SIZE STOCK</th>
+                <th>ADJUST STOCK</th>
+                <th>ACTION</th>
               </tr>
             </thead>
             <tbody>
-              {filteredItems.map((item) => {
-                const isLow = item.stock <= item.minimum
-                const ratio = Math.min(100, Math.round((item.stock / Math.max(item.minimum * 2, 1)) * 100))
-                return (
-                  <tr key={item.id}>
-                    <td>
-                      <div className="inventory-product">
-                        <div
-                          className={`inventory-product__swatch inventory-product__swatch--${item.category.toLowerCase()}`}
-                        >
-                          <Icon name="package" size={17} />
-                        </div>
-                        <span>
-                          <strong>{item.name}</strong>
-                          <small>{item.id}</small>
-                        </span>
+              {filteredProducts.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <div className="inventory-product">
+                      <div className="inventory-product__swatch inventory-product__swatch--uniforms">
+                        <Icon name="package" size={17} />
                       </div>
-                    </td>
-                    <td>{item.category}</td>
-                    <td>{item.course}</td>
-                    <td>{item.color}</td>
-                    <td>
-                      <strong>{formatEtbAsPhp(item.price)}</strong>
-                    </td>
-                    <td>
-                      <div className="stock-cell">
-                        <div className="stock-cell__top">
-                          <strong>{item.stock} units</strong>
-                          <Badge tone={isLow ? 'amber' : 'green'}>
-                            {isLow ? 'Low stock' : 'In stock'}
-                          </Badge>
+                      <span><strong>{item.name}</strong><small>{item.category} · {item.color}</small></span>
+                    </div>
+                  </td>
+                  <td>{item.course}</td>
+                  <td><strong>{formatEtbAsPhp(item.priceEtb)}</strong></td>
+                  <td>
+                    <div className="inventory-size-list">
+                      {item.sizes.map((size) => (
+                        <Badge key={size.id} tone={size.stock <= size.minimum ? 'amber' : 'green'}>
+                          {size.label}: {size.stock}
+                        </Badge>
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    <div className="inventory-size-controls">
+                      {item.sizes.map((size) => (
+                        <div className="inventory-size-control" key={size.id}>
+                          <span>{size.label}</span>
+                          <button
+                            type="button"
+                            disabled={size.stock === 0}
+                            aria-label={`Decrease ${item.name} size ${size.label} stock`}
+                            onClick={() => onAdjustStock(size, -1)}
+                          >−</button>
+                          <strong>{size.stock}</strong>
+                          <button
+                            type="button"
+                            aria-label={`Increase ${item.name} size ${size.label} stock`}
+                            onClick={() => onAdjustStock(size, 1)}
+                          >+</button>
                         </div>
-                        <div className="stock-bar">
-                          <span
-                            className={
-                              isLow
-                                ? 'stock-bar__fill stock-bar__fill--low'
-                                : 'stock-bar__fill'
-                            }
-                            style={{ width: `${ratio}%` }}
-                          />
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="quantity-control">
-                        <button
-                          type="button"
-                          onClick={() => adjustStock(item.id, -1)}
-                          disabled={item.stock === 0}
-                          aria-label={`Decrease ${item.name} stock`}
-                        >
-                          −
-                        </button>
-                        <span>{item.stock}</span>
-                        <button
-                          type="button"
-                          onClick={() => adjustStock(item.id, 1)}
-                          aria-label={`Increase ${item.name} stock`}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-              {!filteredItems.length && (
-                <tr>
-                  <td colSpan="7" className="table-empty">
-                    No products match this view.
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    <button type="button" className="member-action" onClick={() => openProductForm(item)}>
+                      Edit
+                    </button>
                   </td>
                 </tr>
+              ))}
+              {!filteredProducts.length && (
+                <tr><td colSpan="6" className="table-empty">No uniforms match this view.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </section>
-      {addProductOpen && (
+
+      {productFormOpen && (
         <div
           className="product-modal-backdrop"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setAddProductOpen(false)
+            if (event.target === event.currentTarget) setProductFormOpen(false)
           }}
         >
-          <section
-            className="product-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="add-product-title"
-          >
+          <section className="product-modal" role="dialog" aria-modal="true" aria-labelledby="product-form-title">
             <div className="product-modal__header">
               <div>
-                <span>STOCKROOM</span>
-                <h2 id="add-product-title">Add a product</h2>
-                <p>Set the product details and starting stock level.</p>
+                <span>CATALOG & STOCKROOM</span>
+                <h2 id="product-form-title">{product.id ? 'Edit uniform' : 'Add a uniform'}</h2>
+                <p>Changes update both the student catalog and size-level stock.</p>
               </div>
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => setAddProductOpen(false)}
-                aria-label="Close add product form"
-              >
-                ×
-              </button>
+              <button type="button" className="icon-button" onClick={() => setProductFormOpen(false)} aria-label="Close product form">×</button>
             </div>
-            <form className="product-form" onSubmit={addProduct}>
+            <form className="product-form" onSubmit={saveProduct}>
               <label>
                 Product name
-                <input
-                  autoFocus
-                  required
-                  maxLength={80}
-                  value={product.name}
-                  onChange={(event) => {
-                    setProduct({ ...product, name: event.target.value })
-                    setFormError('')
-                  }}
-                  placeholder="e.g. School blazer"
-                />
+                <input required maxLength={80} value={product.name} onChange={(event) => setProduct({ ...product, name: event.target.value })} />
               </label>
               <div className="product-form__row">
                 <label>
                   Category
-                  <select
-                    value={product.category}
-                    onChange={(event) => setProduct({ ...product, category: event.target.value })}
-                  >
+                  <select value={product.category} onChange={(event) => setProduct({ ...product, category: event.target.value })}>
                     {productCategories.map((category) => <option key={category}>{category}</option>)}
                   </select>
                 </label>
                 <label>
                   Course
-                  <select
-                    value={product.course}
-                    onChange={(event) => setProduct({ ...product, course: event.target.value })}
-                  >
+                  <select value={product.course} onChange={(event) => setProduct({ ...product, course: event.target.value })}>
                     <option>All courses</option>
                     {courses.map((course) => <option key={course}>{course}</option>)}
                   </select>
                 </label>
               </div>
-              <label>
-                Color
-                <input
-                  required
-                  maxLength={40}
-                  value={product.color}
-                  onChange={(event) => setProduct({ ...product, color: event.target.value })}
-                  placeholder="e.g. Navy"
-                />
-              </label>
               <div className="product-form__row">
                 <label>
-                  Unit price (ETB)
-                  <input
-                    type="number"
-                    required
-                    min="0.01"
-                    step="0.01"
-                    value={product.price}
-                    onChange={(event) => setProduct({ ...product, price: event.target.value })}
-                    placeholder="0.00"
-                  />
+                  Color
+                  <input required maxLength={40} value={product.color} onChange={(event) => setProduct({ ...product, color: event.target.value })} />
                 </label>
                 <label>
-                  Starting stock
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="1"
-                    value={product.stock}
-                    onChange={(event) => setProduct({ ...product, stock: event.target.value })}
-                    placeholder="0"
-                  />
+                  Unit price (ETB)
+                  <input type="number" required min="0.01" step="0.01" value={product.priceEtb} onChange={(event) => setProduct({ ...product, priceEtb: event.target.value })} />
                 </label>
               </div>
               <label>
-                Low-stock alert at
+                Sizes and stock (size:quantity:low-stock-alert, comma separated)
                 <input
-                  type="number"
                   required
-                  min="0"
-                  step="1"
-                  value={product.minimum}
-                  onChange={(event) => setProduct({ ...product, minimum: event.target.value })}
-                  placeholder="e.g. 8"
+                  value={product.sizesText}
+                  onChange={(event) => setProduct({ ...product, sizesText: event.target.value })}
+                  placeholder="XS:5:1, S:8:2, M:12:3"
                 />
+                <small>Example: XS:5:1, S:8:2, Free Size:15:3</small>
               </label>
               {formError && <p className="product-form__error" role="alert">{formError}</p>}
               <div className="product-form__actions">
-                <Button type="button" variant="outline" onClick={() => setAddProductOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  <Icon name="plus" size={16} /> Save product
+                <Button type="button" variant="outline" onClick={() => setProductFormOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={saving}>
+                  <Icon name="check" size={16} /> {saving ? 'Saving…' : 'Save uniform'}
                 </Button>
               </div>
             </form>

@@ -39,14 +39,25 @@ function TextField({ label, name, type = 'text', value, onChange, placeholder, a
   )
 }
 
-export default function Login({ onSignIn, onNavigate, toast, initialMode = 'login' }) {
+export default function Login({
+  onSignIn,
+  onSignUp,
+  onNavigate,
+  toast,
+  initialMode = 'login',
+  configurationError = '',
+  demoEnabled = false,
+}) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('Student')
   const [loginError, setLoginError] = useState('')
   const [signupError, setSignupError] = useState('')
+  const [signupMessage, setSignupMessage] = useState('')
+  const [busy, setBusy] = useState(false)
   const isSignup = initialMode === 'signup'
+  const displayConfigurationError = configurationError && (!demoEnabled || isSignup)
+  const configurationBlocksForm = Boolean(configurationError && (!demoEnabled || isSignup))
 
   const switchMode = (nextMode) => {
     setLoginError('')
@@ -54,24 +65,41 @@ export default function Login({ onSignIn, onNavigate, toast, initialMode = 'logi
     onNavigate(nextMode === 'signup' ? '/signup' : '/login')
   }
 
-  const submitLogin = (event) => {
+  const submitLogin = async (event) => {
     event.preventDefault()
     if (!email.trim() || !password) {
       setLoginError('Enter your email and password to continue.')
       return
     }
     setLoginError('')
-    onSignIn(role)
+    setBusy(true)
+    try {
+      await onSignIn(email.trim(), password)
+    } catch (error) {
+      setLoginError(error.message || 'Unable to sign in. Please try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const submitSignup = (event) => {
+  const submitSignup = async (event) => {
     event.preventDefault()
     if (!name.trim() || !email.trim() || password.length < 6) {
       setSignupError('Add your name and email. Passwords must be at least 6 characters.')
       return
     }
     setSignupError('')
-    onSignIn(role)
+    setBusy(true)
+    try {
+      const result = await onSignUp(name.trim(), email.trim(), password)
+      if (result?.confirmationRequired) {
+        setSignupMessage('Account created. Check your email to confirm your address before signing in.')
+      }
+    } catch (error) {
+      setSignupError(error.message || 'Unable to create your account. Please try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const stopLinkNavigation = (event) => event.preventDefault()
@@ -96,6 +124,7 @@ export default function Login({ onSignIn, onNavigate, toast, initialMode = 'logi
             <h1>Register</h1>
             <p>Create an account for your campus shop.</p>
           </div>
+          {displayConfigurationError && <div className="login-error" role="alert">{configurationError}</div>}
 
           <form className="login-form" onSubmit={submitSignup}>
             <TextField
@@ -124,17 +153,9 @@ export default function Login({ onSignIn, onNavigate, toast, initialMode = 'logi
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-            <label className="login-field">
-              <span>Workspace role</span>
-              <select value={role} onChange={(event) => setRole(event.target.value)}>
-                <option>Student</option>
-                <option>Finance</option>
-                <option value="Administrator">Mother Admin</option>
-              </select>
-            </label>
-
+            {signupMessage && <div className="login-success" role="status">{signupMessage}</div>}
             {signupError && <div className="login-error" role="alert">{signupError}</div>}
-            <Button type="submit" className="login-submit">
+            <Button type="submit" className="login-submit" disabled={busy || configurationBlocksForm}>
               Register <span aria-hidden="true">→</span>
             </Button>
           </form>
@@ -161,6 +182,7 @@ export default function Login({ onSignIn, onNavigate, toast, initialMode = 'logi
             <h1>Login</h1>
             <p>Sign in to continue to your Uniorder account.</p>
           </div>
+          {displayConfigurationError && <div className="login-error" role="alert">{configurationError}</div>}
 
           <form className="login-form" onSubmit={submitLogin}>
             <TextField
@@ -181,15 +203,6 @@ export default function Login({ onSignIn, onNavigate, toast, initialMode = 'logi
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-            <label className="login-field">
-              <span>Workspace role</span>
-              <select value={role} onChange={(event) => setRole(event.target.value)}>
-                <option>Student</option>
-                <option>Finance</option>
-                <option value="Administrator">Mother Admin</option>
-              </select>
-            </label>
-
             <div className="login-form__helpers">
               <button type="button" className="login-link" onClick={() => onNavigate('/reset-password')}>
                 Forgot password?
@@ -197,26 +210,36 @@ export default function Login({ onSignIn, onNavigate, toast, initialMode = 'logi
             </div>
 
             {loginError && <div className="login-error" role="alert">{loginError}</div>}
-            <Button type="submit" className="login-submit">
+            <Button type="submit" className="login-submit" disabled={busy || Boolean(configurationError)}>
               Login <span aria-hidden="true">→</span>
             </Button>
           </form>
-
-          <div className="login-demo">
-            <span className="login-demo__label">OR TRY A DEMO PROFILE</span>
-            <div className="login-demo__roles">
-              {['Student', 'Finance', 'Administrator'].map((demoRole) => (
-                <button
-                  key={demoRole}
-                  type="button"
-                  className="login-demo__role"
-                  onClick={() => onSignIn(demoRole)}
-                >
-                  {demoRole === 'Administrator' ? 'Mother Admin' : demoRole}
-                </button>
-              ))}
+          {demoEnabled && (
+            <div className="login-demo">
+              <strong>Local demo account</strong>
+              <span>Email: demo.student@uniorder.local</span>
+              <span>Password: Demo123!</span>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={async () => {
+                  setLoginError('')
+                  setBusy(true)
+                  try {
+                    await onSignIn('demo.student@uniorder.local', 'Demo123!')
+                  } catch (error) {
+                    setLoginError(error.message || 'Unable to start the demo.')
+                  } finally {
+                    setBusy(false)
+                  }
+                }}
+              >
+                Continue as Demo Student
+              </Button>
+              <small>Development preview only. Demo orders stay in this browser.</small>
             </div>
-          </div>
+          )}
 
           <p className="login-signup">
             Don&apos;t have an account?{' '}

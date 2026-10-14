@@ -2,20 +2,31 @@ import React, { useState } from 'react'
 import { Button } from './Shared'
 
 export default function SignUp({ onNavigate, onSignUp }) {
-  const [role, setRole] = useState('Student')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault()
     if (!name.trim() || !email.trim() || password.length < 6) {
       setError('Add your name and email. Passwords must be at least 6 characters.')
       return
     }
     setError('')
-    onSignUp(role)
+    setBusy(true)
+    try {
+      const result = await onSignUp(name.trim(), email.trim(), password)
+      if (result?.confirmationRequired) {
+        setMessage('Account created. Check your email to confirm your address before signing in.')
+      }
+    } catch (submitError) {
+      setError(submitError.message || 'Unable to create your account. Please try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -78,14 +89,6 @@ export default function SignUp({ onNavigate, onSignUp }) {
               />
             </label>
             <label>
-              <span>Workspace role</span>
-              <select value={role} onChange={(event) => setRole(event.target.value)}>
-                <option>Student</option>
-                <option>Finance</option>
-                <option value="Administrator">Mother Admin</option>
-              </select>
-            </label>
-            <label>
               <span>School email</span>
               <input
                 type="email"
@@ -106,7 +109,8 @@ export default function SignUp({ onNavigate, onSignUp }) {
               />
             </label>
             {error && <div className="form-error" role="alert">{error}</div>}
-            <Button type="submit" className="auth-submit">
+            {message && <div className="recovery-message recovery-message--success" role="status">{message}</div>}
+            <Button type="submit" className="auth-submit" disabled={busy}>
               Create account <span>→</span>
             </Button>
           </form>
